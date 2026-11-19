@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1424">
+  <meta name="description" content="neV.NEXUS — Connecting People, Creating Opportunities.">
+  <title>neV.NEXUS — Connecter les possibilités</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="intro-screen" id="introScreen" aria-hidden="true">
+    <div class="intro-orbit orbit-one"></div><div class="intro-orbit orbit-two"></div>
+    <div class="intro-brand"><span class="brand-mark">N</span><span>neV.<b>NEXUS</b></span></div>
+    <p>CONNECTING PEOPLE, CREATING OPPORTUNITIES</p>
+  </div>
+  <div class="site-shell">
+    <div class="pilot-banner" id="pilotBanner" role="note" hidden></div>
+    <header class="topbar">
+      <a class="brand" href="/" data-link aria-label="neV.NEXUS — Accueil">
+        <span class="brand-mark">N</span><span>neV.<b>NEXUS</b></span>
+      </a>
+      <nav class="desktop-nav" aria-label="Navigation principale">
+        <a href="/explorer" data-link>Explorer</a>
+        <a href="/opportunites" data-link>Opportunités</a>
+        <a href="/apprendre" data-link>Apprendre</a>
+        <a href="/organisations" data-link>Organisations</a>
+      </nav>
+      <div class="top-actions" id="topActions">
+        <a class="login-link" href="/connexion" data-link>Connexion</a>
+        <a class="button button-small" href="/inscription" data-link>Rejoindre <span>↗</span></a>
+        <button class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </header>
+    <nav class="mobile-nav" id="mobileNav" aria-label="Navigation mobile">
+      <a href="/explorer" data-link>Explorer</a><a href="/opportunites" data-link>Opportunités</a>
+      <a href="/apprendre" data-link>Apprendre</a><a href="/organisations" data-link>Organisations</a>
+      <span id="mobileAuth" style="display:contents"></span>
+    </nav>
+    <main id="app" tabindex="-1"></main>
+    <footer class="footer">
+      <div class="footer-main">
+        <a class="brand footer-brand" href="/" data-link><span class="brand-mark">N</span><span>neV.<b>NEXUS</b></span></a>
+        <p>Relier les personnes, les organisations<br>et les possibilités qui font avancer.</p>
+        <div class="footer-links"><a href="/a-propos" data-link>À propos</a><a href="/confidentialite" data-link>Confidentialité</a><a href="/contact" data-link>Contact</a></div>
+      </div>
+      <div class="footer-bottom"><span>© 2026 neV.NEXUS</span><span>VIVRE · PROGRESSER · CONTRIBUER</span><span>Une initiative de neV.WORLD</span></div>
+    </footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
