@@ -1,19 +1,7 @@
 const app = document.getElementById("app");
-const intro = document.getElementById("introScreen");
 const toastEl = document.getElementById("toast");
 const mobileNav = document.getElementById("mobileNav");
 function toast(message){toastEl.textContent=message;toastEl.classList.add("show");setTimeout(()=>toastEl.classList.remove("show"),3200)}
-const HOME_HTML = `<section class="hero"><div><div class="eyebrow">Un espace pour avancer ensemble</div><h1>Les possibilités existent. <em>Connectons-les.</em></h1><p class="hero-copy">neV.NEXUS rapproche les personnes, les organisations et les ressources afin de faciliter l’accès aux opportunités et de faire émerger des initiatives utiles.</p><div class="hero-actions"><a class="button" href="/explorer" data-link>Explorer la plateforme <span>↗</span></a><a class="button button-outline" href="/a-propos" data-link>Découvrir neV.NEXUS</a></div><div class="hero-note">VIVRE · PROGRESSER · CONTRIBUER</div></div><div class="visual-stage"><div class="visual-glow"></div><div class="orbital one"></div><div class="orbital two"></div><div class="float-chip chip-one"><span>⌕</span> Ressources accessibles</div><div class="core-card"><div class="core-symbol">N.</div><div><div class="core-caption">CONNECTING PEOPLE</div><div class="core-title">Creating<br>opportunities.</div></div></div><div class="float-chip chip-two"><span>✳</span> Intelligence collective</div></div></section>
-<section class="section section-soft"><div class="section-inner"><div class="section-heading"><div class="eyebrow">LIFE DIGITAL</div><h2>Un point de départ. Plusieurs chemins pour avancer.</h2><p>Accédez aux espaces essentiels de neV.NEXUS. Chaque espace possède son propre parcours, conçu pour rester simple et lisible.</p></div><div class="module-grid">
-<a class="module-card" href="/explorer" data-link><div class="module-icon">⌕</div><h3>SEARCH</h3><p>Rechercher des ressources et des structures utiles.</p><div class="card-arrow">Explorer ↗</div></a>
-<a class="module-card" href="/besoin" data-link><div class="module-icon">◇</div><h3>HELP</h3><p>Exprimer un besoin et découvrir les pistes possibles.</p><div class="card-arrow">Exprimer un besoin ↗</div></a>
-<a class="module-card" href="/opportunites" data-link><div class="module-icon">✳</div><h3>OPPORTUNITIES</h3><p>Découvrir des possibilités d’apprentissage et d’engagement.</p><div class="card-arrow">Voir les opportunités ↗</div></a>
-<a class="module-card" href="/apprendre" data-link><div class="module-icon">▤</div><h3>LEARN</h3><p>Accéder à des ressources pour développer ses compétences.</p><div class="card-arrow">Apprendre ↗</div></a>
-<a class="module-card" href="/organisations" data-link><div class="module-icon">⌂</div><h3>COMMUNITY</h3><p>Découvrir les organisations et initiatives locales.</p><div class="card-arrow">Voir les organisations ↗</div></a>
-<a class="module-card" href="/projets" data-link><div class="module-icon">⌘</div><h3>PROJECTS</h3><p>Explorer les initiatives et les projets à impact.</p><div class="card-arrow">Découvrir ↗</div></a>
-<a class="module-card" href="/ressources" data-link><div class="module-icon">▧</div><h3>RESOURCES</h3><p>Retrouver des informations et des ressources pratiques.</p><div class="card-arrow">Consulter ↗</div></a>
-<a class="module-card" href="/assistance" data-link><div class="module-icon">✧</div><h3>ASSIST</h3><p>Comprendre le fonctionnement de la plateforme.</p><div class="card-arrow">Obtenir de l’aide ↗</div></a>
-</div></div></section><section class="statement"><div class="statement-inner"><h2>Une meilleure connexion peut ouvrir de nouvelles possibilités.</h2><p>Un écosystème pensé pour faciliter les rencontres utiles, rendre les ressources plus visibles et encourager la contribution collective.</p></div></section>`;
 
 /* ===== LIFE DIGITAL V3 — connecté à l'API ===== */
 const VS = {pending:"En attente de vérification",verified:"Informations vérifiées",renewal_due:"Vérification à renouveler",flagged:"Information signalée",suspended:"Fiche suspendue"};
@@ -84,7 +72,7 @@ async function organizationPage() {
 /* ----- besoin (HELP) ----- */
 async function needPage() {
   if (!me) return needLogin("Pour déposer une demande d’orientation, créez un compte ou connectez-vous. Votre demande reste privée.");
-  return `${pageHero("HELP", "Faire connaître un besoin.", "Décrivez votre recherche en quelques mots. Une personne habilitée de l’équipe pourra vous orienter.")}<section class="content-wrap"><form class="form-card" id="needForm"><div class="field"><label for="needCat">Nature du besoin</label><select id="needCat">${catOptions()}</select></div><div class="field"><label for="needSummary">Résumé (en une phrase)</label><input id="needSummary" required minlength="3" maxlength="120"></div><div class="field"><label for="needText">Votre besoin</label><textarea id="needText" minlength="8" maxlength="2000" required placeholder="Expliquez ce que vous recherchez…"></textarea></div><div class="field"><label for="needLoc">Localité (facultatif)</label><input id="needLoc" maxlength="80"></div><div class="notice">Votre demande est privée : seules les personnes habilitées de l’équipe peuvent la lire pour vous orienter. Elle est conservée 12 mois au maximum et vous pouvez la supprimer à tout moment depuis votre espace. N’indiquez ni mot de passe, ni données de santé, ni numéro d’identité.</div><p class="form-error" id="needErr" role="alert" hidden></p><div style="margin-top:20px"><button class="button" type="submit">Envoyer ma demande ↗</button></div></form></section>`;
+  return `${pageHero("HELP", "Faire connaître un besoin.", "Décrivez votre recherche en quelques mots. Une personne habilitée de l’équipe pourra vous orienter.")}<section class="content-wrap"><form class="form-card" id="needForm"><div class="field"><label for="needCat">Nature du besoin</label><select id="needCat">${catOptions(new URLSearchParams(location.search).get("c") || "")}</select></div><div class="field"><label for="needSummary">Résumé (en une phrase)</label><input id="needSummary" required minlength="3" maxlength="120"></div><div class="field"><label for="needText">Votre besoin</label><textarea id="needText" minlength="8" maxlength="2000" required placeholder="Expliquez ce que vous recherchez…"></textarea></div><div class="field"><label for="needLoc">Localité (facultatif)</label><input id="needLoc" maxlength="80"></div><div class="notice">Votre demande est privée : seules les personnes habilitées de l’équipe peuvent la lire pour vous orienter. Elle est conservée 12 mois au maximum et vous pouvez la supprimer à tout moment depuis votre espace. N’indiquez ni mot de passe, ni données de santé, ni numéro d’identité.</div><p class="form-error" id="needErr" role="alert" hidden></p><div style="margin-top:20px"><button class="button" type="submit">Envoyer ma demande ↗</button></div></form></section>`;
 }
 
 /* ----- comptes ----- */
@@ -141,14 +129,49 @@ async function adminPage() {
 }
 
 /* ----- pages statiques ----- */
-function home() { return HOME_HTML; }
+const home = async () => NEXUSLANDING.html(me);
+
+const CAT = {
+  "orientation": {h:205, d:"Trouver son chemin : repères, conseils et personnes pour s’orienter.", i:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'},
+  "formation": {h:222, d:"Se former, apprendre un métier, développer de nouvelles compétences.", i:'<path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.3 2.7 3 6 3s6-1.7 6-3v-4.5"/>'},
+  "association": {h:190, d:"Rejoindre des associations et des collectifs près de chez vous.", i:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M16 14c2.8 0 5 1.7 5 4.5"/>'},
+  "opportunite": {h:262, d:"Bourses, stages, emplois, appels à candidatures et occasions à saisir.", i:'<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>'},
+  "accompagnement": {h:175, d:"Être accompagné, conseillé et soutenu dans ses démarches.", i:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'},
+  "services-sociaux": {h:240, d:"Accéder aux services sociaux, à la santé et aux aides disponibles.", i:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/>'},
+  "entrepreneuriat": {h:215, d:"Lancer et développer un projet : conseils, financements, réseaux.", i:'<path d="M5 19c0-4 2-7 5-9l4-4c3-1 5-1 6-1 0 1 0 3-1 6l-4 4c-2 3-5 5-9 5z"/><circle cx="15" cy="9" r="1.4"/>'},
+  "initiative-communautaire": {h:198, d:"Participer à des projets utiles à la communauté, ou en lancer un.", i:'<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2v4.3M12 11.5l-6 4.5M12 11.5l6 4.5"/>'}
+};
+const catMeta = c => CAT[c.slug] || {h:210, d:"", i:'<circle cx="12" cy="12" r="8"/>'};
+const catIcon = c => `<span class="cat-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${catMeta(c).i}</svg></span>`;
+const plural = (n, s, p) => `${n} ${n > 1 ? p : s}`;
+const catCounts = c => { const parts = []; if (c.resources) parts.push(plural(c.resources, "ressource", "ressources")); if (c.opportunities) parts.push(plural(c.opportunities, "opportunité", "opportunités")); if (c.organizations) parts.push(plural(c.organizations, "organisation", "organisations")); return parts; };
+
+async function explorerPage() {
+  try { categories = await get("/api/categories"); } catch {}
+  const cards = categories.map((c, i) => { const m = catMeta(c), n = catCounts(c);
+    return `<a class="cat-card" href="/categorie?c=${esc(c.slug)}" data-link style="--h:${m.h};--i:${i}">${catIcon(c)}<span class="cat-go" aria-hidden="true">↗</span><h3>${esc(c.name)}</h3><p>${esc(m.d)}</p><div class="cat-count">${n.length ? esc(n.join(" · ")) : "Premiers contenus bientôt"}</div></a>`; }).join("");
+  return `<section class="ex-hero"><div class="eyebrow">EXPLORER</div><h1>Que cherchez-vous&nbsp;?</h1><p>Choisissez une catégorie pour découvrir les ressources, les opportunités et les organisations vérifiées qui s’y rattachent.</p><form class="ex-search" id="exSearch" role="search"><input type="search" name="q" placeholder="Rechercher une ressource, un mot-clé…" aria-label="Rechercher" maxlength="80"><button class="button button-small" type="submit">Rechercher</button></form></section><section class="content-wrap" style="padding-top:10px"><div class="cat-grid">${cards}</div><div class="ex-band"><div><b>Vous ne trouvez pas ce qu’il vous faut ?</b><span>Décrivez votre besoin : il reste privé et la modération vous oriente.</span></div><a class="button" href="/besoin" data-link>Déposer un besoin ↗</a></div></section>`;
+}
+async function categoryPage() {
+  const slug = new URLSearchParams(location.search).get("c");
+  try { categories = await get("/api/categories"); } catch {}
+  const c = categories.find(x => x.slug === slug);
+  if (!c) return `<section class="not-found"><h1>Catégorie introuvable.</h1><a class="button" href="/explorer" data-link>Toutes les catégories</a></section>`;
+  const m = catMeta(c), n = catCounts(c), qs = new URLSearchParams({category: c.name, limit: 12});
+  const [res, opp, org] = await Promise.all([get(`/api/resources?${qs}`).catch(() => []), get(`/api/opportunities?${qs}`).catch(() => []), get(`/api/organizations?${qs}`).catch(() => [])]);
+  const sec = (title, rows, fn, empty) => `<div class="cp-sec"><h2>${title}<small>${rows.length ? plural(rows.length, "fiche", "fiches") : ""}</small></h2>${rows.length ? `<div class="result-grid">${rows.map(fn).join("")}</div>` : `<div class="empty">${empty}</div>`}</div>`;
+  const chips = categories.filter(x => x.slug !== slug).map(x => `<a href="/categorie?c=${esc(x.slug)}" data-link style="--h:${catMeta(x).h}">${esc(x.name)}</a>`).join("");
+  return `<section class="cp-hero" style="--h:${m.h}"><a class="cp-back" href="/explorer" data-link>← Toutes les catégories</a><div class="cp-head">${catIcon(c)}<div><h1>${esc(c.name)}</h1><p>${esc(m.d)}</p></div></div><div class="cp-stats"><span>${esc(n.length ? n.join(" · ") : "Premiers contenus bientôt")}</span></div></section><section class="content-wrap" style="padding-top:0">${sec("Ressources", res, x => resultCard(x, "resource"), "Aucune ressource publiée dans cette catégorie pour le moment.")}${sec("Opportunités", opp, x => resultCard(x, "opportunity"), "Aucune opportunité ouverte dans cette catégorie pour le moment.")}${sec("Organisations", org, orgCard, "Aucune organisation vérifiée dans cette catégorie pour le moment.")}<div class="ex-band"><div><b>Une ressource ou une organisation à proposer&nbsp;?</b><span>Les fiches sont relues avant publication.</span></div><div><a class="button" href="/besoin?c=${encodeURIComponent(c.name)}" data-link>Déposer un besoin</a> <a class="button button-outline" href="/inscription" data-link>Rejoindre ↗</a></div></div><div class="cat-chips">${chips}</div></section>`;
+}
 const about = async () => `${pageHero("À PROPOS", "Connecter les personnes. Créer des possibilités.", "neV.NEXUS est un projet conçu pour rapprocher les personnes, les organisations, les ressources et les opportunités.")}<section class="content-wrap"><div class="two-col"><article class="info-card"><span class="tag">Notre raison d’être</span><h3>Faciliter les connexions utiles</h3><p>Rendre les ressources plus accessibles, soutenir les initiatives et favoriser la coopération.</p></article><article class="info-card"><span class="tag">Nos piliers</span><h3>Vivre · Progresser · Contribuer</h3><p>Trois orientations complémentaires qui structurent la vision de neV.NEXUS.</p></article></div></section>`;
 const generic = (title, kicker, desc) => async () => `${pageHero(kicker, title, desc)}<section class="content-wrap"><div class="notice">Cet espace est prévu dans la vision de neV.NEXUS. Son contenu et ses fonctionnalités seront activés progressivement, après validation et développement.</div></section>`;
 const privacy = async () => `${pageHero("CONFIDENTIALITÉ", "La confiance commence par la transparence.", "Voici, simplement, ce que fait cette version pilote avec vos données.")}<section class="content-wrap"><div class="notice" style="margin-bottom:22px">Version pilote : ce texte décrit le fonctionnement actuel du service. Il sera complété et validé juridiquement (Code du numérique béninois, APDP) avant toute ouverture publique.</div><div class="two-col"><article class="info-card"><h3>Données collectées</h3><p>Adresse électronique, nom affiché et mot de passe (conservé uniquement sous forme chiffrée irréversible). Pour un besoin déposé : son texte et la localité facultative. Pour une organisation : les informations de sa fiche. Aucune autre donnée personnelle n’est demandée.</p></article><article class="info-card"><h3>Finalités</h3><p>Faire fonctionner votre compte, vous orienter vers des ressources, modérer les contenus et assurer la sécurité du service. Rien n’est vendu ni utilisé à des fins publicitaires.</p></article><article class="info-card"><h3>Qui peut voir quoi</h3><p>Vos demandes sont privées : seules les personnes habilitées de l’équipe de modération peuvent les lire, et chaque consultation est journalisée. Les coordonnées d’une organisation ne sont publiques que si elle les a indiquées comme telles.</p></article><article class="info-card"><h3>Durée et suppression</h3><p>Les demandes sont supprimées automatiquement après 12 mois. Vous pouvez supprimer une demande ou votre compte complet à tout moment depuis « Mon espace ».</p></article></div></section>`;
 
 const routes = {
   "/": home,
-  "/explorer": listPage("SEARCH", "Explorer les ressources", "Recherchez des ressources et des pistes d’accompagnement proposées par des organisations vérifiées.", "resource"),
+  "/explorer": explorerPage,
+  "/categorie": categoryPage,
+  "/rechercher": listPage("SEARCH", "Résultats de recherche", "Ressources proposées par des organisations vérifiées.", "resource"),
   "/ressources": listPage("RESOURCES", "Ressources utiles", "Retrouvez des ressources classées pour faciliter vos recherches.", "resource"),
   "/besoin": needPage,
   "/opportunites": listPage("OPPORTUNITIES", "Des possibilités à découvrir.", "Occasions de se former, de contribuer et de développer des initiatives.", "opportunity"),
@@ -162,7 +185,7 @@ const routes = {
   "/contact": generic("Entrer en contact.", "CONTACT", "Les canaux de contact officiels seront publiés après leur mise en place."),
   "/inscription-organisation": async () => registerPage(),
 };
-const listKind = {"/explorer":"resource","/ressources":"resource","/opportunites":"opportunity","/apprendre":"learn","/organisations":"organization"};
+const listKind = {"/rechercher":"resource","/ressources":"resource","/opportunites":"opportunity","/apprendre":"learn","/organisations":"organization"};
 function currentPath() { return location.pathname.replace(/\/+$/, "") || "/"; }
 const full = () => currentPath() + location.search;
 
@@ -183,16 +206,20 @@ async function render(path = currentPath()) {
   document.querySelectorAll(".desktop-nav a").forEach(a => a.classList.toggle("active", a.getAttribute("href") === path));
   mobileNav.classList.remove("open");
   document.title = "neV.NEXUS — Connecter les possibilités";
+  NEXUSLANDING.stop();
+  document.body.classList.toggle("landing", path === "/");
+  document.body.classList.toggle("dark", path === "/" || path === "/explorer" || path === "/categorie");
+  if (path === "/") NEXUSLANDING.start({onExplore: p => navigate(p)});
+  if (path === "/rechercher") { const s = new URLSearchParams(location.search).get("q"); if (s && q("listSearch")) q("listSearch").value = s; }
   if (listKind[path]) { loadList(listKind[path]); }
   window.scrollTo({top: 0, behavior: "instant"}); app.focus({preventScroll: true});
 }
 function navigate(target, playIntro = false) {
   const u = new URL(target, location.origin); const p = u.pathname.replace(/\/+$/, "") || "/";
-  if (p + u.search === full()) { if (p === "/" && playIntro) showIntro(); else window.scrollTo({top: 0, behavior: "smooth"}); return; }
+  if (p + u.search === full()) { window.scrollTo({top: 0, behavior: "smooth"}); return; }
   app.firstElementChild?.classList.add("page-out");
   setTimeout(() => { history.pushState({}, "", p + u.search); render(p); }, 140);
 }
-function showIntro() { intro.classList.remove("done"); intro.style.display = "flex"; setTimeout(() => intro.classList.add("done"), 1550); setTimeout(() => intro.style.display = "none", 2250); }
 
 /* ----- dialogue de signalement ----- */
 function askReason() {
@@ -239,7 +266,8 @@ document.addEventListener("submit", async e => {
   e.preventDefault(); const f = e.target.id; const v = id => q(id)?.value.trim() ?? "";
   const btn = e.target.querySelector("button[type=submit]"); if (btn) btn.disabled = true;
   try {
-    if (f === "registerForm") { const r = await post("/api/auth/register", {displayName: v("rName"), email: v("rEmail"), password: q("rPass").value, accountType: v("rType"), inviteCode: q("rInvite") ? v("rInvite") : undefined, acceptTerms: q("rTerms").checked}); me = r.user; topActions(); toast("Compte créé. Bienvenue !"); navigate("/compte"); }
+    if (f === "exSearch") { const s = e.target.q.value.trim(); navigate("/rechercher" + (s ? "?q=" + encodeURIComponent(s) : "")); }
+    else if (f === "registerForm") { const r = await post("/api/auth/register", {displayName: v("rName"), email: v("rEmail"), password: q("rPass").value, accountType: v("rType"), inviteCode: q("rInvite") ? v("rInvite") : undefined, acceptTerms: q("rTerms").checked}); me = r.user; topActions(); toast("Compte créé. Bienvenue !"); navigate("/compte"); }
     else if (f === "loginForm") { const r = await post("/api/auth/login", {email: v("lEmail"), password: q("lPass").value}); me = r.user; topActions(); navigate("/compte"); }
     else if (f === "needForm") { await post("/api/needs", {category: v("needCat") || null, summary: v("needSummary"), description: v("needText"), locality: v("needLoc") || null}); toast("Votre demande a bien été enregistrée."); navigate("/compte"); }
     else if (f === "orgForm") { await post("/api/organizations", {name: v("oName"), category: v("oCat") || null, description: v("oDesc"), services: v("oServ"), targetAudience: v("oAud"), interventionZone: v("oZone"), locality: v("oLoc") || null, publicEmail: v("oMail") || null, publicPhone: v("oTel") || null, accessConditions: v("oAcc")}); toast("Fiche soumise. Elle sera examinée avant publication."); render(); }
@@ -260,6 +288,4 @@ window.addEventListener("popstate", () => render(currentPath()));
   if (cfg.notice) { const b = q("pilotBanner"); b.textContent = cfg.notice; b.hidden = false; }
   topActions();
   await render();
-  if (!sessionStorage.getItem("nevIntroSeen")) { sessionStorage.setItem("nevIntroSeen", "1"); setTimeout(() => { intro.classList.add("done"); setTimeout(() => intro.style.display = "none", 700); }, 1700); }
-  else { intro.classList.add("done"); intro.style.display = "none"; }
 })();

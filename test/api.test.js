@@ -128,6 +128,13 @@ test("cycle organisation : soumission, vérification, publication, modification,
   assert.equal(list[0].organization, "Association Test");
   assert.equal((await anon.get("/api/resources?category=Formation")).json.length, 0);
 
+  // les compteurs de catégories reflètent uniquement le contenu public
+  const cats = (await anon.get("/api/categories")).json;
+  const orient = cats.find((c) => c.slug === "orientation"), assoc = cats.find((c) => c.slug === "association");
+  assert.equal(orient.resources, 1);
+  assert.equal(assoc.organizations, 1);
+  assert.equal(cats.find((c) => c.slug === "formation").resources, 0);
+
   // modifier une fiche vérifiée relance la vérification et la retire de l'affichage
   const upd = await owner.patch(`/api/organizations/${orgId}`, { ...orgBody, description: "Description modifiée de la fiche." });
   assert.equal(upd.json.verification_status, "pending");

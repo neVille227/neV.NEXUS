@@ -180,7 +180,17 @@ export function createApp({ pool, env = process.env } = {}) {
     notice: "Version pilote : service en test supervisé, ne saisissez aucune information sensible.",
   }));
   app.get("/api/categories", wrap(async (req, res) => {
-    res.json((await pool.query("SELECT name, slug FROM categories ORDER BY name")).rows);
+    // Compteurs : uniquement les contenus publiés d'organisations vérifiées (ce que le public peut voir).
+    res.json((await pool.query(`
+      SELECT c.name, c.slug,
+        (SELECT COUNT(*)::int FROM resources r JOIN organizations o ON o.id = r.organization_id
+          WHERE r.category_id = c.id AND r.status = 'published' AND o.verification_status IN ('verified','renewal_due')) AS resources,
+        (SELECT COUNT(*)::int FROM opportunities p JOIN organizations o ON o.id = p.organization_id
+          WHERE p.category_id = c.id AND p.status = 'published' AND o.verification_status IN ('verified','renewal_due')
+            AND (p.deadline IS NULL OR p.deadline > NOW())) AS opportunities,
+        (SELECT COUNT(*)::int FROM organizations o
+          WHERE o.category_id = c.id AND o.verification_status IN ('verified','renewal_due')) AS organizations
+      FROM categories c ORDER BY c.name`)).rows);
   }));
 
   const searchClause = (q, cols, params) => {
