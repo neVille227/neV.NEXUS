@@ -12,7 +12,7 @@
   var LK = 'nevLite';
   var NL = { get: function () { try { return g.localStorage.getItem(LK) === '1'; } catch (e) { return false; } },
     set: function (on) { try { on ? g.localStorage.setItem(LK, '1') : g.localStorage.removeItem(LK); } catch (e) {} NL.apply(); },
-    apply: function () { doc.body.classList.toggle('lite', NL.get()); } };
+    apply: function () { doc.body.classList.toggle('lite', NL.get()); try { doc.dispatchEvent(new CustomEvent('nevlite')); } catch (e) {} } };
   g.NEXUSLITE = NL; NL.apply();
 
   function html(me) {
@@ -33,7 +33,7 @@
       '<button class="lp-skip" id="lpSkip" type="button">Passer ›</button>' +
       '<nav class="lp-foot" aria-label="Liens"><a href="/a-propos" data-link>À propos</a>' +
         (me ? '<a href="/compte" data-link>Mon espace</a>' : '<a href="/connexion" data-link>Connexion</a>') +
-        '<a href="/confidentialite" data-link>Confidentialité</a><button type="button" class="lp-lite" id="lpLite" aria-pressed="false">Mode allégé</button></nav>' +
+        '<a href="/confidentialite" data-link>Confidentialité</a></nav>' +
       '<i class="lp-flash" aria-hidden="true"></i></section>';
   }
 
@@ -60,8 +60,7 @@
       lp.classList.add('play'); mark();
       later(function () { lp.classList.add('done'); }, 4700);    // le bouton « Passer » disparaît quand tout est en place
     }
-    var lt = doc.getElementById('lpLite'); lt.setAttribute('aria-pressed', NL.get()); lt.textContent = NL.get() ? 'Mode allégé : activé' : 'Mode allégé';
-    lt.addEventListener('click', function () { NL.set(!NL.get()); lt.setAttribute('aria-pressed', NL.get()); lt.textContent = NL.get() ? 'Mode allégé : activé' : 'Mode allégé'; if (NL.get()) { lp.classList.remove('play'); lp.classList.add('settled', 'done'); } });
+    doc.addEventListener('nevlite', function onl() { if (!doc.getElementById('lp')) { doc.removeEventListener('nevlite', onl); return; } if (NL.get()) { lp.classList.remove('play'); lp.classList.add('settled', 'done'); } });
     doc.getElementById('lpSkip').addEventListener('click', function () { lp.classList.remove('play'); lp.classList.add('settled', 'done'); });
 
     /* parallaxe douce : la planète et le logo suivent le pointeur / l'inclinaison de l'appareil, en sens opposés */

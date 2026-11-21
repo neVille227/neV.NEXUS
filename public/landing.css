@@ -284,3 +284,33 @@ body.lite .cat-card{opacity:1;transform:none}
 .sv-chap button.on{background:#2868a8;border-color:#2868a8;color:#fff}
 .sv-chap button.past{border-color:#5db4ff}
 @media(max-width:600px){.vi{padding:0 16px 60px}.sv-cap{font-size:13px}.sv-chap button{width:24px}.vn-cta{display:none}}
+
+/* ---------- guide, bouton « ? » et bouton ⚡ (inspirés de NEHODO.22) ---------- */
+.help-btn{position:fixed;right:16px;bottom:16px;z-index:200;width:44px;height:44px;border-radius:50%;border:1px solid rgba(120,170,230,.45);background:rgba(8,20,44,.85);color:#fff;font:700 16px Manrope,sans-serif;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:transform .2s,border-color .2s}
+.help-btn:hover,.help-btn:focus-visible{transform:translateY(-2px);border-color:#7cc0ff;outline:none}
+.lite-btn{position:fixed;left:16px;bottom:16px;z-index:200;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 13px;border-radius:99px;border:1px solid rgba(120,170,230,.4);background:rgba(8,20,44,.85);color:#dce9fa;font:600 12px Manrope,sans-serif;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.lite-btn em{font-style:normal}
+.lite-btn[aria-pressed="true"]{border-color:#7cc0ff;color:#9fd0ff}
+.tuto,.tuto-invite{position:fixed;z-index:250;border:1px solid rgba(124,192,255,.5);border-radius:16px;background:rgba(7,18,40,.94);color:#e8f1ff;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 24px 70px rgba(0,0,0,.5)}
+.tuto{right:16px;bottom:70px;width:min(380px,calc(100% - 32px));display:grid;gap:10px;padding:22px 22px 18px}
+.tuto[hidden]{display:none}
+.tuto h2{margin:0;font:700 19px Manrope,sans-serif;letter-spacing:-.3px;color:#fff}
+.tuto p{margin:0;font-size:13px;line-height:1.7;color:#a9c1e0}
+.tuto .eyebrow{font-size:10px}
+.tuto-x{position:absolute;top:8px;right:12px;border:0;background:none;color:#8fa9c9;font-size:22px;line-height:1;cursor:pointer}
+.tuto-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 14px Manrope,sans-serif;background:linear-gradient(135deg,#3c9bff,#1257b5);color:#fff}
+.tuto-dots{display:flex;gap:6px}
+.tuto-dots i{width:6px;height:6px;border-radius:50%;background:rgba(120,170,230,.35)}
+.tuto-dots i.is-on{width:18px;border-radius:3px;background:#7cc0ff}
+.tuto-nav{display:flex;gap:10px;justify-content:flex-end}
+.tuto-nav .button{padding:9px 16px;font-size:12px}
+.tuto-nav .button:disabled{opacity:.4}
+.tuto .button-outline,.tuto-invite .button-outline{background:transparent;color:#e8f1ff;border-color:rgba(150,200,255,.35)}
+.tuto-invite{left:50%;bottom:22px;transform:translateX(-50%);width:min(30rem,calc(100% - 140px));display:grid;gap:12px;padding:16px 18px;animation:inviteIn .5s both}
+.tuto-invite p{margin:0;font-size:13px;line-height:1.6;color:#dce9fa}
+.tuto-invite div{display:flex;gap:10px;flex-wrap:wrap}
+@keyframes inviteIn{from{opacity:0;transform:translate(-50%,16px)}to{opacity:1;transform:translate(-50%,0)}}
+.tuto-hl{position:relative;color:#fff!important}
+.tuto-hl::after{content:"";position:absolute;inset:-5px -10px;border-radius:99px;border:2px solid #7cc0ff;animation:hl 1.2s ease-in-out infinite;pointer-events:none}
+@keyframes hl{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:1;transform:scale(1.04)}}
+@media(max-width:700px){.tuto{bottom:66px}.tuto-invite{bottom:66px;width:calc(100% - 32px)}.lite-btn em{display:none}.lite-btn{padding:0 11px}}
