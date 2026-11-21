@@ -8,6 +8,13 @@
   var seen = function () { try { return !!g.sessionStorage.getItem('nevIntroSeen'); } catch (e) { return false; } };
   var mark = function () { try { g.sessionStorage.setItem('nevIntroSeen', '1'); } catch (e) {} };
 
+  /* mode allégé : moins d'animations, utile sur connexion lente ou appareil modeste */
+  var LK = 'nevLite';
+  var NL = { get: function () { try { return g.localStorage.getItem(LK) === '1'; } catch (e) { return false; } },
+    set: function (on) { try { on ? g.localStorage.setItem(LK, '1') : g.localStorage.removeItem(LK); } catch (e) {} NL.apply(); },
+    apply: function () { doc.body.classList.toggle('lite', NL.get()); } };
+  g.NEXUSLITE = NL; NL.apply();
+
   function html(me) {
     return '<section class="lp" id="lp" aria-label="neV.NEXUS — Connecting People, Creating Opportunities">' +
       '<div class="lp-stars" id="lpStars" aria-hidden="true"><i class="lp-shoot"></i></div>' +
@@ -21,11 +28,12 @@
         '<p class="lp-tag"><span class="sr-only">Connecting People, Creating Opportunities</span><img src="/img/tagline.webp" alt="" aria-hidden="true" width="1300" height="49" decoding="async"></p>' +
       '</div></div>' +
       '<div class="lp-cta"><a class="lp-btn" id="exploreBtn" href="/explorer" data-link>Explorer <span aria-hidden="true">↗</span></a>' +
-        '<p class="lp-sub">Ressources · Opportunités · Organisations vérifiées</p></div>' +
+        '<p class="lp-sub">Ressources · Opportunités · Organisations vérifiées</p>' +
+        '<a class="lp-visit" href="/visite" data-link>▶ Visite guidée</a></div>' +
       '<button class="lp-skip" id="lpSkip" type="button">Passer ›</button>' +
       '<nav class="lp-foot" aria-label="Liens"><a href="/a-propos" data-link>À propos</a>' +
         (me ? '<a href="/compte" data-link>Mon espace</a>' : '<a href="/connexion" data-link>Connexion</a>') +
-        '<a href="/confidentialite" data-link>Confidentialité</a></nav>' +
+        '<a href="/confidentialite" data-link>Confidentialité</a><button type="button" class="lp-lite" id="lpLite" aria-pressed="false">Mode allégé</button></nav>' +
       '<i class="lp-flash" aria-hidden="true"></i></section>';
   }
 
@@ -44,14 +52,16 @@
     opts = opts || {};
     var timers = [], off = [], leaving = false;
     var later = function (fn, ms) { var t = setTimeout(fn, ms); timers.push(t); return t; };
-    stars(doc.getElementById('lpStars'));
+    if (!NL.get()) stars(doc.getElementById('lpStars'));
 
-    var quick = reduced || seen();
+    var quick = reduced || seen() || NL.get();
     if (quick) { lp.classList.add('settled'); lp.classList.add('done'); }
     else {
       lp.classList.add('play'); mark();
       later(function () { lp.classList.add('done'); }, 4700);    // le bouton « Passer » disparaît quand tout est en place
     }
+    var lt = doc.getElementById('lpLite'); lt.setAttribute('aria-pressed', NL.get()); lt.textContent = NL.get() ? 'Mode allégé : activé' : 'Mode allégé';
+    lt.addEventListener('click', function () { NL.set(!NL.get()); lt.setAttribute('aria-pressed', NL.get()); lt.textContent = NL.get() ? 'Mode allégé : activé' : 'Mode allégé'; if (NL.get()) { lp.classList.remove('play'); lp.classList.add('settled', 'done'); } });
     doc.getElementById('lpSkip').addEventListener('click', function () { lp.classList.remove('play'); lp.classList.add('settled', 'done'); });
 
     /* parallaxe douce : la planète et le logo suivent le pointeur / l'inclinaison de l'appareil, en sens opposés */

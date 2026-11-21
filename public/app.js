@@ -141,6 +141,7 @@ const CAT = {
   "entrepreneuriat": {h:215, d:"Lancer et développer un projet : conseils, financements, réseaux.", i:'<path d="M5 19c0-4 2-7 5-9l4-4c3-1 5-1 6-1 0 1 0 3-1 6l-4 4c-2 3-5 5-9 5z"/><circle cx="15" cy="9" r="1.4"/>'},
   "initiative-communautaire": {h:198, d:"Participer à des projets utiles à la communauté, ou en lancer un.", i:'<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2v4.3M12 11.5l-6 4.5M12 11.5l6 4.5"/>'}
 };
+window.NEXUSCATHUE = Object.fromEntries(Object.entries(CAT).map(([k, v]) => [k, v.h]));
 const catMeta = c => CAT[c.slug] || {h:210, d:"", i:'<circle cx="12" cy="12" r="8"/>'};
 const catIcon = c => `<span class="cat-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${catMeta(c).i}</svg></span>`;
 const plural = (n, s, p) => `${n} ${n > 1 ? p : s}`;
@@ -171,6 +172,7 @@ const routes = {
   "/": home,
   "/explorer": explorerPage,
   "/categorie": categoryPage,
+  "/visite": async () => { try { categories = await get("/api/categories"); } catch {} return NEXUSVISITE.html(categories, me); },
   "/rechercher": listPage("SEARCH", "Résultats de recherche", "Ressources proposées par des organisations vérifiées.", "resource"),
   "/ressources": listPage("RESOURCES", "Ressources utiles", "Retrouvez des ressources classées pour faciliter vos recherches.", "resource"),
   "/besoin": needPage,
@@ -206,10 +208,11 @@ async function render(path = currentPath()) {
   document.querySelectorAll(".desktop-nav a").forEach(a => a.classList.toggle("active", a.getAttribute("href") === path));
   mobileNav.classList.remove("open");
   document.title = "neV.NEXUS — Connecter les possibilités";
-  NEXUSLANDING.stop();
+  NEXUSLANDING.stop(); NEXUSVISITE.stop();
   document.body.classList.toggle("landing", path === "/");
-  document.body.classList.toggle("dark", path === "/" || path === "/explorer" || path === "/categorie");
+  document.body.classList.toggle("dark", path === "/" || path === "/explorer" || path === "/categorie" || path === "/visite");
   if (path === "/") NEXUSLANDING.start({onExplore: p => navigate(p)});
+  if (path === "/visite") NEXUSVISITE.start(categories);
   if (path === "/rechercher") { const s = new URLSearchParams(location.search).get("q"); if (s && q("listSearch")) q("listSearch").value = s; }
   if (listKind[path]) { loadList(listKind[path]); }
   window.scrollTo({top: 0, behavior: "instant"}); app.focus({preventScroll: true});
