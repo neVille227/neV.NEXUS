@@ -65,14 +65,6 @@
   function weak() { var n = g.navigator, c = n.connection || {}; return (n.deviceMemory && n.deviceMemory <= 2) || (n.hardwareConcurrency && n.hardwareConcurrency <= 2) || c.saveData === true || /(^|-)2g$|3g/.test(c.effectiveType || ''); }
 
   function init() {
-    var help = doc.createElement('button'); help.className = 'help-btn'; help.type = 'button'; help.textContent = '?'; help.title = 'Guide du site'; help.setAttribute('aria-label', 'Ouvrir le guide du site');
-    help.addEventListener('click', function () { card && !card.hidden ? close() : open(0); }); doc.body.appendChild(help);
-
-    var lb = doc.createElement('button'); lb.className = 'lite-btn'; lb.type = 'button'; lb.title = 'Mode allégé : pour les appareils ou connexions lents';
-    var paint = function () { var on = lite(); lb.setAttribute('aria-pressed', on ? 'true' : 'false'); lb.innerHTML = '<span aria-hidden="true">⚡</span><em>' + (on ? 'Mode allégé activé' : 'Mode allégé') + '</em>'; };
-    lb.addEventListener('click', function () { g.NEXUSLITE.set(!lite()); });
-    doc.addEventListener('nevlite', paint); paint(); doc.body.appendChild(lb);
-
     var done = null, lt = null; try { done = g.localStorage.getItem(KEY); lt = g.localStorage.getItem('nevLite'); } catch (e) {}
     var tour = function () { if (!done) invite(); };
     if (lt === null && weak()) {

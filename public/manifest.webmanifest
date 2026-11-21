@@ -1,0 +1,21 @@
+{
+  "name": "neV.NEXUS",
+  "short_name": "neV.NEXUS",
+  "description": "Connecting People, Creating Opportunities — ressources, opportunités et organisations vérifiées.",
+  "lang": "fr",
+  "start_url": "/explorer",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050c1c",
+  "theme_color": "#050c1c",
+  "icons": [
+    { "src": "/img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Explorer", "url": "/explorer" },
+    { "name": "Déposer un besoin", "url": "/besoin" },
+    { "name": "Visite guidée", "url": "/visite" }
+  ]
+}

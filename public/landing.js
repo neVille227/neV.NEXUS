@@ -33,7 +33,7 @@
       '<button class="lp-skip" id="lpSkip" type="button">Passer ›</button>' +
       '<nav class="lp-foot" aria-label="Liens"><a href="/a-propos" data-link>À propos</a>' +
         (me ? '<a href="/compte" data-link>Mon espace</a>' : '<a href="/connexion" data-link>Connexion</a>') +
-        '<a href="/confidentialite" data-link>Confidentialité</a></nav>' +
+        '<a href="/confidentialite" data-link>Confidentialité</a><button type="button" class="lp-set" data-settings>Réglages</button></nav>' +
       '<i class="lp-flash" aria-hidden="true"></i></section>';
   }
 

@@ -1,6 +1,5 @@
 const app = document.getElementById("app");
 const toastEl = document.getElementById("toast");
-const mobileNav = document.getElementById("mobileNav");
 function toast(message){toastEl.textContent=message;toastEl.classList.add("show");setTimeout(()=>toastEl.classList.remove("show"),3200)}
 
 /* ===== LIFE DIGITAL V3 — connecté à l'API ===== */
@@ -25,15 +24,15 @@ const catOptions = (sel = "") => `<option value="">Sélectionner une catégorie<
 const formError = (id, e) => { const el = q(id); if (el) { el.textContent = e.message; el.hidden = false; } };
 
 function topActions() {
-  const box = q("topActions"), mob = q("mobileAuth");
+  const box = q("topActions"), gear = `<button class="icon-btn" type="button" data-settings aria-label="Réglages" title="Réglages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>`;
+  const tab = q("tabAccount");
   if (me) {
-    box.innerHTML = `<a class="login-link" href="/compte" data-link>${esc(me.displayName)}</a><button class="button button-small button-outline" id="logoutBtn" type="button">Déconnexion</button><button class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu">☰</button>`;
-    mob.innerHTML = `<a href="/compte" data-link>Mon espace</a>` + (RANK[me.role] >= 2 ? `<a href="/admin" data-link>Modération</a>` : "");
+    box.innerHTML = (RANK[me.role] >= 2 ? `<a class="login-link keep" href="/admin" data-link>Modération</a>` : "") + `<a class="login-link who" href="/compte" data-link>${esc(me.displayName)}</a><button class="button button-small button-outline" id="logoutBtn" type="button">Déconnexion</button>` + gear;
+    tab.setAttribute("href", "/compte"); tab.querySelector("span").textContent = "Mon espace";
   } else {
-    box.innerHTML = `<a class="login-link" href="/connexion" data-link>Connexion</a><a class="button button-small" href="/inscription" data-link>Rejoindre <span>↗</span></a><button class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu">☰</button>`;
-    mob.innerHTML = `<a href="/connexion" data-link>Connexion</a><a href="/inscription" data-link>Rejoindre</a>`;
+    box.innerHTML = `<a class="login-link" href="/connexion" data-link>Connexion</a><a class="button button-small" href="/inscription" data-link>Rejoindre</a>` + gear;
+    tab.setAttribute("href", "/connexion"); tab.querySelector("span").textContent = "Compte";
   }
-  q("menuToggle").addEventListener("click", () => mobileNav.classList.toggle("open"));
 }
 
 function pageHero(kicker, title, desc) { return `<section class="page-hero"><div class="eyebrow">${esc(kicker)}</div><h1>${esc(title)}</h1><p>${esc(desc)}</p></section>`; }
@@ -151,7 +150,7 @@ async function explorerPage() {
   try { categories = await get("/api/categories"); } catch {}
   const cards = categories.map((c, i) => { const m = catMeta(c), n = catCounts(c);
     return `<a class="cat-card" href="/categorie?c=${esc(c.slug)}" data-link style="--h:${m.h};--i:${i}">${catIcon(c)}<span class="cat-go" aria-hidden="true">↗</span><h3>${esc(c.name)}</h3><p>${esc(m.d)}</p><div class="cat-count">${n.length ? esc(n.join(" · ")) : "Premiers contenus bientôt"}</div></a>`; }).join("");
-  return `<section class="ex-hero"><div class="eyebrow">EXPLORER</div><h1>Que cherchez-vous&nbsp;?</h1><p>Choisissez une catégorie pour découvrir les ressources, les opportunités et les organisations vérifiées qui s’y rattachent.</p><form class="ex-search" id="exSearch" role="search"><input type="search" name="q" placeholder="Rechercher une ressource, un mot-clé…" aria-label="Rechercher" maxlength="80"><button class="button button-small" type="submit">Rechercher</button></form></section><section class="content-wrap" style="padding-top:10px"><div class="cat-grid">${cards}</div><div class="ex-band"><div><b>Vous ne trouvez pas ce qu’il vous faut ?</b><span>Décrivez votre besoin : il reste privé et la modération vous oriente.</span></div><a class="button" href="/besoin" data-link>Déposer un besoin ↗</a></div></section>`;
+  return `<section class="ex-hero"><div class="eyebrow">EXPLORER</div><h1>Que cherchez-vous&nbsp;?</h1><p>Choisissez une catégorie pour découvrir les ressources, les opportunités et les organisations vérifiées qui s’y rattachent.</p><form class="ex-search" id="exSearch" role="search"><input type="search" name="q" placeholder="Rechercher une ressource, un mot-clé…" aria-label="Rechercher" maxlength="80"><button class="button button-small" type="submit">Rechercher</button></form></section><section class="content-wrap" style="padding-top:10px"><div class="cat-grid">${cards}</div><ul class="glist ex-more">${[["/opportunites","Opportunités","Bourses, stages, appels à candidatures"],["/apprendre","Apprendre","Contenus pour progresser"],["/organisations","Organisations","Le répertoire des structures vérifiées"],["/visite","Visite guidée","Comprendre neV.NEXUS en quelques minutes"]].map(([h,t,d]) => `<li><a href="${h}" data-link><span>${t}<small>${d}</small></span><svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6"/></svg></a></li>`).join("")}</ul><div class="ex-band"><div><b>Vous ne trouvez pas ce qu’il vous faut ?</b><span>Décrivez votre besoin : il reste privé et la modération vous oriente.</span></div><a class="button" href="/besoin" data-link>Déposer un besoin ↗</a></div></section>`;
 }
 async function categoryPage() {
   const slug = new URLSearchParams(location.search).get("c");
@@ -206,11 +205,10 @@ async function render(path = currentPath()) {
   if (tok !== renderToken) return;
   app.innerHTML = `<div class="page-transition">${html}</div>`;
   document.querySelectorAll(".desktop-nav a").forEach(a => a.classList.toggle("active", a.getAttribute("href") === path));
-  mobileNav.classList.remove("open");
+  document.querySelectorAll(".tab").forEach(t => { const h = t.getAttribute("href"); t.toggleAttribute("aria-current", h === path || (h === "/connexion" && ["/inscription","/compte","/admin"].includes(path)) || (h === "/compte" && ["/inscription","/connexion","/admin"].includes(path))); if (t.hasAttribute("aria-current")) t.setAttribute("aria-current", "page"); });
   document.title = "neV.NEXUS — Connecter les possibilités";
   NEXUSLANDING.stop(); NEXUSVISITE.stop();
   document.body.classList.toggle("landing", path === "/");
-  document.body.classList.toggle("dark", path === "/" || path === "/explorer" || path === "/categorie" || path === "/visite");
   if (path === "/") NEXUSLANDING.start({onExplore: p => navigate(p)});
   if (path === "/visite") NEXUSVISITE.start(categories);
   if (path === "/rechercher") { const s = new URLSearchParams(location.search).get("q"); if (s && q("listSearch")) q("listSearch").value = s; }
