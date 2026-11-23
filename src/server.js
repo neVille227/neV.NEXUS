@@ -1,5 +1,6 @@
 import pg from "pg";
 import { createApp, maintenance, ensureAdmin } from "./app.js";
+import { pgSsl } from "./pgssl.js";
 
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL manquant");
@@ -7,7 +8,7 @@ if (!process.env.DATABASE_URL) {
 }
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined,
+  ssl: pgSsl(),
   max: 10,
 });
 pool.on("error", (e) => console.error("pool", e.message));

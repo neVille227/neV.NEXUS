@@ -1,3 +1,4 @@
+import { pgSsl } from "../src/pgssl.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,6 +33,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.error("DATABASE_URL manquant");
     process.exit(1);
   }
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSL === "true" ? { rejectUnauthorized: false } : undefined });
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, ssl: pgSsl() });
   migrate(pool).then(() => pool.end()).catch((e) => { console.error(e); process.exit(1); });
 }
