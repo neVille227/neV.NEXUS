@@ -7,7 +7,7 @@ const VS = {pending:"En attente de vérification",verified:"Informations vérifi
 const ST = {pending_review:"En attente de relecture",published:"Publié",rejected:"Refusé",archived:"Archivé",draft:"Brouillon",received:"Reçu",reviewing:"En cours d’examen",referred:"Orienté",closed:"Clôturé",open:"Ouvert",under_review:"En cours",resolved:"Résolu",dismissed:"Rejeté"};
 const ROLES = {member:"Membre",organization:"Organisation",moderator:"Modérateur",administrator:"Administrateur"};
 const RANK = {member:0,organization:1,moderator:2,administrator:3};
-let me = null, cfg = {registrationMode:"closed",notice:""}, categories = [], activeFilter = "Tout", renderToken = 0;
+let me = null, cfg = {registrationMode:"closed",notice:""}, categories = [], families = [], activeFilter = "Tout", renderToken = 0;
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDate = d => d ? new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"}) : "";
@@ -20,7 +20,11 @@ async function api(method, url, body) {
 }
 const get = u => api("GET", u), post = (u, b) => api("POST", u, b ?? {}), patch = (u, b) => api("PATCH", u, b ?? {}), del = (u, b) => api("DELETE", u, b);
 const badge = (s) => `<span class="badge b-${esc(s)}">${esc(VS[s] || ST[s] || s)}</span>`;
-const catOptions = (sel = "") => `<option value="">Sélectionner une catégorie</option>` + categories.map(c => `<option ${c.name === sel ? "selected" : ""}>${esc(c.name)}</option>`).join("");
+const famOf = c => families.find(f => (c.families || [])[0] === f.slug);
+const loadCat = async () => { try { const k = await get("/api/catalogue"); categories = k.categories; families = k.families; } catch {} };
+const catOptions = (sel = "", empty = "Sélectionner une catégorie") => `<option value="">${empty}</option>` + (families.length
+  ? families.map(f => `<optgroup label="${esc(f.name)}">${f.categories.map(s => categories.find(c => c.slug === s)).filter(Boolean).map(c => `<option ${c.name === sel ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</optgroup>`).join("")
+  : categories.map(c => `<option ${c.name === sel ? "selected" : ""}>${esc(c.name)}</option>`).join(""));
 const formError = (id, e) => { const el = q(id); if (el) { el.textContent = e.message; el.hidden = false; } };
 
 function topActions() {
@@ -71,7 +75,28 @@ async function organizationPage() {
 /* ----- besoin (HELP) ----- */
 async function needPage() {
   if (!me) return needLogin("Pour déposer une demande d’orientation, créez un compte ou connectez-vous. Votre demande reste privée.");
-  return `${pageHero("HELP", "Faire connaître un besoin.", "Décrivez votre recherche en quelques mots. Une personne habilitée de l’équipe pourra vous orienter.")}<section class="content-wrap"><form class="form-card" id="needForm"><div class="field"><label for="needCat">Nature du besoin</label><select id="needCat">${catOptions(new URLSearchParams(location.search).get("c") || "")}</select></div><div class="field"><label for="needSummary">Résumé (en une phrase)</label><input id="needSummary" required minlength="3" maxlength="120"></div><div class="field"><label for="needText">Votre besoin</label><textarea id="needText" minlength="8" maxlength="2000" required placeholder="Expliquez ce que vous recherchez…"></textarea></div><div class="field"><label for="needLoc">Localité (facultatif)</label><input id="needLoc" maxlength="80"></div><div class="notice">Votre demande est privée : seules les personnes habilitées de l’équipe peuvent la lire pour vous orienter. Elle est conservée 12 mois au maximum et vous pouvez la supprimer à tout moment depuis votre espace. N’indiquez ni mot de passe, ni données de santé, ni numéro d’identité.</div><p class="form-error" id="needErr" role="alert" hidden></p><div style="margin-top:20px"><button class="button" type="submit">Envoyer ma demande ↗</button></div></form></section>`;
+  await loadCat();
+  const P = new URLSearchParams(location.search), c0 = P.get("c") || "", s0 = P.get("s") || "";
+  const cur = categories.find(c => c.name === c0), subOpts = (cur ? cur.subcategories : []).map(s => `<option ${s.name === s0 ? "selected" : ""}>${esc(s.name)}</option>`).join("");
+  const sel = (id, label, opts, req) => `<div class="field"><label for="${id}">${label}</label><select id="${id}"${req ? " required" : ""}>${opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></div>`;
+  const more = families.map(f => `<fieldset class="more-fam"><legend>${esc(f.name)}</legend>${f.categories.map(s => categories.find(c => c.slug === s)).filter(Boolean).map(c => `<label class="check"><input type="checkbox" name="needMore" value="${esc(c.name)}"> ${esc(c.name)}</label>`).join("")}</fieldset>`).join("");
+  return `${pageHero("HELP", "Faire connaître un besoin.", "Décrivez votre situation avec vos mots. Aucun besoin n’est trop petit pour être exprimé.")}<section class="content-wrap"><form class="form-card wide" id="needForm">
+<div class="notice" role="note"><strong>neV.NEXUS n’est pas un service d’urgence.</strong> En cas de danger immédiat, contactez les services d’urgence de votre pays. Les situations médicales, juridiques ou de sécurité sont orientées vers des professionnels compétents.</div>
+<div class="field"><label for="needSummary">Titre (en une phrase)</label><input id="needSummary" required minlength="3" maxlength="120"></div>
+<div class="field"><label for="needCat">Catégorie principale</label><select id="needCat">${catOptions(c0, "Je ne sais pas — « Autres besoins »")}</select></div>
+<div class="field"><label for="needSub">Sous-catégorie (facultatif)</label><select id="needSub"><option value="">—</option>${subOpts}</select></div>
+<details class="panel more"><summary>Ajouter d’autres catégories concernées (facultatif)</summary>${more}</details>
+<div class="field"><label for="needText">Description de la situation</label><textarea id="needText" minlength="8" maxlength="2000" required placeholder="Expliquez librement ce que vous recherchez…"></textarea></div>
+<div class="two-col">
+${sel("needNature", "Nature du besoin", [["", "—"], ["materiel", "Matériel"], ["financier", "Financier"], ["humain", "Humain"], ["technique", "Technique"], ["informationnel", "Informationnel"], ["autre", "Autre"]])}
+${sel("needFreq", "Fréquence", [["", "—"], ["ponctuel", "Ponctuel"], ["occasionnel", "Occasionnel"], ["regulier", "Régulier"], ["permanent", "Permanent"]])}
+${sel("needPrio", "Niveau de priorité", [["normal", "Normal"], ["faible", "Faible"], ["eleve", "Élevé"], ["urgent", "Urgent"]])}
+${sel("needSupport", "Accompagnement souhaité", [["", "—"], ["aide_directe", "Aide directe"], ["orientation", "Orientation"], ["mise_en_relation", "Mise en relation"], ["conseil", "Conseil"], ["formation", "Formation"]])}
+<div class="field"><label for="needCountry">Pays</label><input id="needCountry" maxlength="60" value="Bénin"></div>
+<div class="field"><label for="needLoc">Ville ou zone (facultatif)</label><input id="needLoc" maxlength="80" placeholder="Abomey-Calavi"></div></div>
+<div class="field"><label for="needConf">Confidentialité</label><select id="needConf"><option value="private">Strictement confidentielle (recommandé)</option><option value="organizations">Limitée aux organisations vérifiées</option><option value="public">Demande publique</option></select><small id="needSens" class="hint" hidden>Cette catégorie est sensible : la demande reste strictement confidentielle.</small></div>
+<div class="notice">En phase pilote, une demande n’est lue que par les personnes habilitées de l’équipe, et jamais affichée publiquement. Elle est conservée 12 mois au maximum ; vous pouvez la supprimer à tout moment. N’indiquez ni mot de passe, ni numéro d’identité, ni détails médicaux.</div>
+<p class="form-error" id="needErr" role="alert" hidden></p><div style="margin-top:var(--s5)"><button class="button" type="submit">Envoyer ma demande ↗</button></div></form></section>`;
 }
 
 /* ----- comptes ----- */
@@ -123,6 +148,11 @@ async function adminPage() {
   if (me.role === "administrator") {
     const users = await get("/api/admin/users");
     h += `<h2 class="sec">Utilisateurs</h2><div class="list">${users.map(u => `<div class="row"><span>${esc(u.display_name)} — ${esc(u.email)} ${u.is_active ? "" : "<em>(désactivé)</em>"}</span><span class="acts">${u.id === me.id ? "<small>vous</small>" : `<select data-role="${esc(u.id)}" aria-label="Rôle">${Object.keys(ROLES).map(r => `<option value="${r}" ${r === u.role ? "selected" : ""}>${ROLES[r]}</option>`).join("")}</select>${btn(`user:${u.id}:${u.is_active ? "off" : "on"}`, u.is_active ? "Désactiver" : "Réactiver")}`}</span></div>`).join("")}</div>`;
+
+    const K = await get("/api/admin/catalogue");
+    h += `<h2 class="sec">Catalogue des catégories (${K.categories.length})</h2><div class="list">${K.categories.map(c => `<details class="row col catrow"><summary><strong>${String(c.position).padStart(2, "0")} · ${esc(c.name)}</strong> ${c.active ? "" : "<em>(désactivée)</em>"} ${c.sensitive ? `<span class="badge b-pending_review">sensible</span>` : ""} <small>${c.subcategories.length} sous-catégories</small></summary><div class="acts">${c.slug === "autres-besoins" ? "<small>Toujours accessible</small>" : btn(`cat:${c.id}:${c.active ? "off" : "on"}`, c.active ? "Désactiver" : "Activer")}</div><ul class="subl">${c.subcategories.map(s => `<li>${esc(s.name)} ${s.active ? "" : "<em>(désactivée)</em>"} ${btn(`sub:${s.id}:${s.active ? "off" : "on"}`, s.active ? "Désactiver" : "Activer")}</li>`).join("")}</ul></details>`).join("")}</div>`;
+    h += `<details class="panel"><summary>Ajouter une catégorie</summary><form class="form-card" id="catForm"><div class="field"><label for="ctName">Nom</label><input id="ctName" required minlength="2" maxlength="60"></div><div class="field"><label for="ctFam">Famille d’affichage</label><select id="ctFam">${K.families.map(f => `<option value="${esc(f.slug)}">${esc(f.name)}</option>`).join("")}</select></div><label class="check"><input type="checkbox" id="ctSens"> Catégorie sensible (confidentialité renforcée)</label><p class="form-error" id="ctErr" role="alert" hidden></p><div style="margin-top:var(--s4)"><button class="button" type="submit">Ajouter</button></div></form></details>`;
+    h += `<details class="panel"><summary>Ajouter une sous-catégorie</summary><form class="form-card" id="subForm"><div class="field"><label for="sbCat">Catégorie</label><select id="sbCat">${K.categories.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select></div><div class="field"><label for="sbName">Nom</label><input id="sbName" required minlength="2" maxlength="80"></div><p class="form-error" id="sbErr" role="alert" hidden></p><div style="margin-top:var(--s4)"><button class="button" type="submit">Ajouter</button></div></form></details>`;
   }
   return h + `</section>`;
 }
@@ -130,38 +160,45 @@ async function adminPage() {
 /* ----- pages statiques ----- */
 const home = async () => NEXUSLANDING.html(me);
 
-const CAT = {
-  "orientation": {h:205, d:"Trouver son chemin : repères, conseils et personnes pour s’orienter.", i:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'},
-  "formation": {h:222, d:"Se former, apprendre un métier, développer de nouvelles compétences.", i:'<path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.3 2.7 3 6 3s6-1.7 6-3v-4.5"/>'},
-  "association": {h:190, d:"Rejoindre des associations et des collectifs près de chez vous.", i:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M16 14c2.8 0 5 1.7 5 4.5"/>'},
-  "opportunite": {h:262, d:"Bourses, stages, emplois, appels à candidatures et occasions à saisir.", i:'<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>'},
-  "accompagnement": {h:175, d:"Être accompagné, conseillé et soutenu dans ses démarches.", i:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'},
-  "services-sociaux": {h:240, d:"Accéder aux services sociaux, à la santé et aux aides disponibles.", i:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/>'},
-  "entrepreneuriat": {h:215, d:"Lancer et développer un projet : conseils, financements, réseaux.", i:'<path d="M5 19c0-4 2-7 5-9l4-4c3-1 5-1 6-1 0 1 0 3-1 6l-4 4c-2 3-5 5-9 5z"/><circle cx="15" cy="9" r="1.4"/>'},
-  "initiative-communautaire": {h:198, d:"Participer à des projets utiles à la communauté, ou en lancer un.", i:'<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2v4.3M12 11.5l-6 4.5M12 11.5l6 4.5"/>'}
+const FAM = {
+  "vie-quotidienne": {h:212, i:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'},
+  "sante-et-bien-etre": {h:172, i:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'},
+  "education-et-avenir": {h:228, i:'<path d="m2 9 10-5 10 5-10 5z"/><path d="M6 11.5V16c0 1.3 2.7 3 6 3s6-1.7 6-3v-4.5"/>'},
+  "vie-sociale": {h:196, i:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M16 14c2.8 0 5 1.7 5 4.5"/>'},
+  "vie-pratique": {h:205, i:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>'},
+  "epanouissement": {h:262, i:'<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>'},
+  "collectivite-et-environnement": {h:150, i:'<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2v4.3M12 11.5l-6 4.5M12 11.5l6 4.5"/>'},
+  "autres-et-situations-particulieres": {h:240, i:'<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/>'}
 };
-window.NEXUSCATHUE = Object.fromEntries(Object.entries(CAT).map(([k, v]) => [k, v.h]));
-const catMeta = c => CAT[c.slug] || {h:210, d:"", i:'<circle cx="12" cy="12" r="8"/>'};
+const catMeta = c => { const f = (c.families || [])[0]; return FAM[f] || {h:210, i:'<circle cx="12" cy="12" r="8"/>'}; };
+const syncHue = () => { window.NEXUSCATHUE = Object.fromEntries(categories.map(c => [c.slug, catMeta(c).h])); };
 const catIcon = c => `<span class="cat-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${catMeta(c).i}</svg></span>`;
+const subPreview = c => (c.subcategories || []).slice(0, 3).map(s => s.name).join(" · ");
 const plural = (n, s, p) => `${n} ${n > 1 ? p : s}`;
 const catCounts = c => { const parts = []; if (c.resources) parts.push(plural(c.resources, "ressource", "ressources")); if (c.opportunities) parts.push(plural(c.opportunities, "opportunité", "opportunités")); if (c.organizations) parts.push(plural(c.organizations, "organisation", "organisations")); return parts; };
 
 async function explorerPage() {
-  try { categories = await get("/api/categories"); } catch {}
-  const cards = categories.map((c, i) => { const m = catMeta(c), n = catCounts(c);
-    return `<a class="cat-card" href="/categorie?c=${esc(c.slug)}" data-link style="--h:${m.h};--i:${i}">${catIcon(c)}<span class="cat-go" aria-hidden="true">↗</span><h3>${esc(c.name)}</h3><p>${esc(m.d)}</p><div class="cat-count">${n.length ? esc(n.join(" · ")) : "Premiers contenus bientôt"}</div></a>`; }).join("");
-  return `<section class="ex-hero"><div class="eyebrow">EXPLORER</div><h1>Que cherchez-vous&nbsp;?</h1><p>Choisissez une catégorie pour découvrir les ressources, les opportunités et les organisations vérifiées qui s’y rattachent.</p><form class="ex-search" id="exSearch" role="search"><input type="search" name="q" placeholder="Rechercher une ressource, un mot-clé…" aria-label="Rechercher" maxlength="80"><button class="button button-small" type="submit">Rechercher</button></form></section><section class="content-wrap" style="padding-top:10px"><div class="cat-grid">${cards}</div><ul class="glist ex-more">${[["/opportunites","Opportunités","Bourses, stages, appels à candidatures"],["/apprendre","Apprendre","Contenus pour progresser"],["/organisations","Organisations","Le répertoire des structures vérifiées"],["/visite","Visite guidée","Comprendre neV.NEXUS en quelques minutes"]].map(([h,t,d]) => `<li><a href="${h}" data-link><span>${t}<small>${d}</small></span><svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6"/></svg></a></li>`).join("")}</ul><div class="ex-band"><div><b>Vous ne trouvez pas ce qu’il vous faut ?</b><span>Décrivez votre besoin : il reste privé et la modération vous oriente.</span></div><a class="button" href="/besoin" data-link>Déposer un besoin ↗</a></div></section>`;
+  await loadCat(); syncHue();
+  const card = (c, i) => { const m = catMeta(c), n = catCounts(c);
+    return `<a class="cat-card" href="/categorie?c=${esc(c.slug)}" data-link style="--h:${m.h};--i:${i % 8}"><span class="cat-num">${String(c.position).padStart(2, "0")}</span><span class="cat-go" aria-hidden="true">↗</span><h3>${esc(c.name)}</h3><p>${esc(subPreview(c))}…</p><div class="cat-count">${n.length ? esc(n.join(" · ")) : `${plural((c.subcategories || []).length, "sujet", "sujets")}`}</div></a>`; };
+  const secs = families.map(f => { const cs = f.categories.map(s => categories.find(c => c.slug === s)).filter(Boolean), m = FAM[f.slug] || {h:210, i:""};
+    return `<section class="fam" id="f-${esc(f.slug)}" style="--h:${m.h}"><div class="fam-head"><span class="cat-ico"><svg viewBox="0 0 24 24" aria-hidden="true">${m.i}</svg></span><div><h2>${esc(f.name)}</h2><p>${esc(f.description)}</p></div></div><div class="cat-grid">${cs.map(card).join("")}</div></section>`; }).join("");
+  const jump = families.map(f => `<a href="#f-${esc(f.slug)}" data-jump style="--h:${(FAM[f.slug] || {}).h || 210}">${esc(f.name)}</a>`).join("");
+  return `<section class="ex-hero"><div class="eyebrow">EXPLORER</div><h1>Que cherchez-vous&nbsp;?</h1><p>${categories.length} catégories, regroupées en ${families.length} familles. Aucun besoin n’est trop petit pour être exprimé.</p><form class="ex-search" id="exSearch" role="search"><input type="search" name="q" placeholder="Rechercher une ressource, un mot-clé…" aria-label="Rechercher" maxlength="80"><button class="button button-small" type="submit">Rechercher</button></form><nav class="fam-jump" aria-label="Familles">${jump}</nav></section><section class="content-wrap" style="padding-top:var(--s2)">${secs}<ul class="glist ex-more">${[["/opportunites","Opportunités","Bourses, stages, appels à candidatures"],["/apprendre","Apprendre","Contenus pour progresser"],["/organisations","Organisations","Le répertoire des structures vérifiées"],["/visite","Visite guidée","Comprendre neV.NEXUS en quelques minutes"]].map(([h,t,d]) => `<li><a href="${h}" data-link><span>${t}<small>${d}</small></span><svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6"/></svg></a></li>`).join("")}</ul><div class="ex-band"><div><b>Vous ne trouvez pas ce qu’il vous faut ?</b><span>Choisissez « Autres besoins » : décrivez votre situation librement, elle reste privée.</span></div><a class="button" href="/besoin?c=Autres%20besoins" data-link>Déposer un besoin ↗</a></div></section>`;
 }
 async function categoryPage() {
   const slug = new URLSearchParams(location.search).get("c");
-  try { categories = await get("/api/categories"); } catch {}
+  await loadCat(); syncHue();
   const c = categories.find(x => x.slug === slug);
   if (!c) return `<section class="not-found"><h1>Catégorie introuvable.</h1><a class="button" href="/explorer" data-link>Toutes les catégories</a></section>`;
   const m = catMeta(c), n = catCounts(c), qs = new URLSearchParams({category: c.name, limit: 12});
   const [res, opp, org] = await Promise.all([get(`/api/resources?${qs}`).catch(() => []), get(`/api/opportunities?${qs}`).catch(() => []), get(`/api/organizations?${qs}`).catch(() => [])]);
   const sec = (title, rows, fn, empty) => `<div class="cp-sec"><h2>${title}<small>${rows.length ? plural(rows.length, "fiche", "fiches") : ""}</small></h2>${rows.length ? `<div class="result-grid">${rows.map(fn).join("")}</div>` : `<div class="empty">${empty}</div>`}</div>`;
-  const chips = categories.filter(x => x.slug !== slug).map(x => `<a href="/categorie?c=${esc(x.slug)}" data-link style="--h:${catMeta(x).h}">${esc(x.name)}</a>`).join("");
-  return `<section class="cp-hero" style="--h:${m.h}"><a class="cp-back" href="/explorer" data-link>← Toutes les catégories</a><div class="cp-head">${catIcon(c)}<div><h1>${esc(c.name)}</h1><p>${esc(m.d)}</p></div></div><div class="cp-stats"><span>${esc(n.length ? n.join(" · ") : "Premiers contenus bientôt")}</span></div></section><section class="content-wrap" style="padding-top:0">${sec("Ressources", res, x => resultCard(x, "resource"), "Aucune ressource publiée dans cette catégorie pour le moment.")}${sec("Opportunités", opp, x => resultCard(x, "opportunity"), "Aucune opportunité ouverte dans cette catégorie pour le moment.")}${sec("Organisations", org, orgCard, "Aucune organisation vérifiée dans cette catégorie pour le moment.")}<div class="ex-band"><div><b>Une ressource ou une organisation à proposer&nbsp;?</b><span>Les fiches sont relues avant publication.</span></div><div><a class="button" href="/besoin?c=${encodeURIComponent(c.name)}" data-link>Déposer un besoin</a> <a class="button button-outline" href="/inscription" data-link>Rejoindre ↗</a></div></div><div class="cat-chips">${chips}</div></section>`;
+  const fam = famOf(c), sibs = fam ? fam.categories.filter(s => s !== slug).map(s => categories.find(x => x.slug === s)).filter(Boolean) : [];
+  const chips = sibs.map(x => `<a href="/categorie?c=${esc(x.slug)}" data-link style="--h:${catMeta(x).h}">${esc(x.name)}</a>`).join("");
+  const subs = (c.subcategories || []).map(s => `<a href="/besoin?c=${encodeURIComponent(c.name)}&s=${encodeURIComponent(s.name)}" data-link>${esc(s.name)}</a>`).join("");
+  const care = c.sensitive ? `<div class="notice" style="margin-top:var(--s4)"><strong>Situation médicale, juridique ou de sécurité ?</strong> neV.NEXUS vous oriente vers des professionnels et services compétents. Ce n’est pas un service d’urgence et il ne remplace pas les professionnels habilités.</div>` : "";
+  return `<section class="cp-hero" style="--h:${m.h}"><a class="cp-back" href="/explorer" data-link>← Toutes les catégories</a><div class="cp-head">${catIcon(c)}<div><div class="eyebrow">${fam ? esc(fam.name) : "Catégorie"} · ${String(c.position).padStart(2, "0")}</div><h1>${esc(c.name)}</h1></div></div><div class="cp-stats"><span>${esc(n.length ? n.join(" · ") : "Premiers contenus bientôt")}</span></div>${care}</section><section class="content-wrap" style="padding-top:0"><div class="cp-sec"><h2>Ce que vous pouvez y trouver</h2><div class="sub-chips">${subs}</div></div>${sec("Ressources", res, x => resultCard(x, "resource"), "Aucune ressource publiée dans cette catégorie pour le moment.")}${sec("Opportunités", opp, x => resultCard(x, "opportunity"), "Aucune opportunité ouverte dans cette catégorie pour le moment.")}${sec("Organisations", org, orgCard, "Aucune organisation vérifiée dans cette catégorie pour le moment.")}<div class="ex-band"><div><b>Un besoin dans cette catégorie ?</b><span>Il reste privé ; la modération vous oriente.</span></div><div><a class="button" href="/besoin?c=${encodeURIComponent(c.name)}" data-link>Déposer un besoin</a> <a class="button button-outline" href="/inscription" data-link>Rejoindre ↗</a></div></div><div class="cat-chips">${chips}</div></section>`;
 }
 const about = async () => `${pageHero("À PROPOS", "Connecter les personnes. Créer des possibilités.", "neV.NEXUS est un projet conçu pour rapprocher les personnes, les organisations, les ressources et les opportunités.")}<section class="content-wrap"><div class="two-col"><article class="info-card"><span class="tag">Notre raison d’être</span><h3>Faciliter les connexions utiles</h3><p>Rendre les ressources plus accessibles, soutenir les initiatives et favoriser la coopération.</p></article><article class="info-card"><span class="tag">Nos piliers</span><h3>Vivre · Progresser · Contribuer</h3><p>Trois orientations complémentaires qui structurent la vision de neV.NEXUS.</p></article></div></section>`;
 const generic = (title, kicker, desc) => async () => `${pageHero(kicker, title, desc)}<section class="content-wrap"><div class="notice">Cet espace est prévu dans la vision de neV.NEXUS. Son contenu et ses fonctionnalités seront activés progressivement, après validation et développement.</div></section>`;
@@ -171,7 +208,7 @@ const routes = {
   "/": home,
   "/explorer": explorerPage,
   "/categorie": categoryPage,
-  "/visite": async () => { try { categories = await get("/api/categories"); } catch {} return NEXUSVISITE.html(categories, me); },
+  "/visite": async () => { await loadCat(); syncHue(); return NEXUSVISITE.html(categories, me); },
   "/rechercher": listPage("SEARCH", "Résultats de recherche", "Ressources proposées par des organisations vérifiées.", "resource"),
   "/ressources": listPage("RESOURCES", "Ressources utiles", "Retrouvez des ressources classées pour faciliter vos recherches.", "resource"),
   "/besoin": needPage,
@@ -257,9 +294,25 @@ async function adminAction(act) {
   else if (k === "report") await patch(`/api/admin/reports/${id}`, {status: val});
   else if (k === "need") await patch(`/api/admin/needs/${id}`, {status: val});
   else if (k === "user") await patch(`/api/admin/users/${id}`, {isActive: val === "on"});
+  else if (k === "cat") { await patch(`/api/admin/categories/${id}`, {active: val === "on"}); await loadCat(); }
+  else if (k === "sub") await patch(`/api/admin/subcategories/${id}`, {active: val === "on"});
   toast("Action enregistrée."); render();
 }
+document.addEventListener("click", e => {
+  const j = e.target.closest("a[data-jump]"); if (!j) return; e.preventDefault();
+  document.querySelector(j.getAttribute("href"))?.scrollIntoView({behavior: document.body.classList.contains("lite") ? "auto" : "smooth", block: "start"});
+});
 document.addEventListener("change", async e => {
+  if (e.target.id === "needCat") {
+    const c = categories.find(x => x.name === e.target.value), sub = q("needSub");
+    sub.innerHTML = `<option value="">—</option>` + (c ? c.subcategories.map(s => `<option>${esc(s.name)}</option>`).join("") : "");
+    const hit = !!c?.sensitive || [...document.querySelectorAll("input[name=needMore]:checked")].some(x => categories.find(k => k.name === x.value)?.sensitive);
+    q("needSens").hidden = !hit; if (hit) q("needConf").value = "private";
+  }
+  if (e.target.name === "needMore") {
+    const hit = [e.target.form.needCat.value, ...[...document.querySelectorAll("input[name=needMore]:checked")].map(x => x.value)].some(n => categories.find(k => k.name === n)?.sensitive);
+    q("needSens").hidden = !hit; if (hit) q("needConf").value = "private";
+  }
   if (e.target.dataset.role) { try { await patch(`/api/admin/users/${e.target.dataset.role}`, {role: e.target.value}); toast("Rôle mis à jour."); } catch (err) { toast(err.message); render(); } }
 });
 document.addEventListener("submit", async e => {
@@ -270,14 +323,16 @@ document.addEventListener("submit", async e => {
     if (f === "exSearch") { const s = e.target.q.value.trim(); navigate("/rechercher" + (s ? "?q=" + encodeURIComponent(s) : "")); }
     else if (f === "registerForm") { const r = await post("/api/auth/register", {displayName: v("rName"), email: v("rEmail"), password: q("rPass").value, accountType: v("rType"), inviteCode: q("rInvite") ? v("rInvite") : undefined, acceptTerms: q("rTerms").checked}); me = r.user; topActions(); toast("Compte créé. Bienvenue !"); navigate("/compte"); }
     else if (f === "loginForm") { const r = await post("/api/auth/login", {email: v("lEmail"), password: q("lPass").value}); me = r.user; topActions(); navigate("/compte"); }
-    else if (f === "needForm") { await post("/api/needs", {category: v("needCat") || null, summary: v("needSummary"), description: v("needText"), locality: v("needLoc") || null}); toast("Votre demande a bien été enregistrée."); navigate("/compte"); }
+    else if (f === "needForm") { await post("/api/needs", {category: v("needCat") || null, subcategory: v("needSub") || null, categories: [...document.querySelectorAll("input[name=needMore]:checked")].map(x => x.value), summary: v("needSummary"), description: v("needText"), locality: v("needLoc") || null, country: v("needCountry") || null, nature: v("needNature") || null, frequency: v("needFreq") || null, priority: v("needPrio"), supportType: v("needSupport") || null, confidentiality: v("needConf")}); toast("Votre demande a bien été enregistrée."); navigate("/compte"); }
     else if (f === "orgForm") { await post("/api/organizations", {name: v("oName"), category: v("oCat") || null, description: v("oDesc"), services: v("oServ"), targetAudience: v("oAud"), interventionZone: v("oZone"), locality: v("oLoc") || null, publicEmail: v("oMail") || null, publicPhone: v("oTel") || null, accessConditions: v("oAcc")}); toast("Fiche soumise. Elle sera examinée avant publication."); render(); }
+    else if (f === "catForm") { await post("/api/admin/categories", {name: v("ctName"), families: [v("ctFam")], sensitive: q("ctSens").checked}); toast("Catégorie ajoutée."); await loadCat(); render(); }
+    else if (f === "subForm") { await post(`/api/admin/categories/${v("sbCat")}/subcategories`, {name: v("sbName")}); toast("Sous-catégorie ajoutée."); await loadCat(); render(); }
     else if (f === "contentForm") { const kind = v("cKind"); const body = {title: v("cTitle"), description: v("cDesc"), category: v("cCat") || null, locality: v("cLoc") || null}; if (kind === "opportunities" && v("cDate")) body.deadline = new Date(v("cDate") + "T23:59:59Z").toISOString(); await post(`/api/organizations/${v("cOrg")}/${kind}`, body); toast("Envoyé pour relecture."); render(); }
     else if (f === "pwForm") { await post("/api/me/password", {currentPassword: q("pwOld").value, newPassword: q("pwNew").value}); toast("Mot de passe modifié."); e.target.reset(); }
     else if (f === "delForm") { if (!confirm("Supprimer définitivement votre compte ?")) return; await del("/api/me", {password: q("delPw").value}); me = null; topActions(); toast("Compte supprimé."); navigate("/"); }
     else if (f === "learnForm") { await post("/api/admin/learn", {title: v("lnTitle"), description: v("lnDesc"), topic: v("lnTopic") || "Général", level: v("lnLevel"), url: v("lnUrl") || null}); toast("Contenu publié."); e.target.reset(); }
   } catch (err) {
-    const errId = {registerForm:"rErr", loginForm:"lErr", needForm:"needErr", orgForm:"oErr", contentForm:"cErr", pwForm:"pwErr", delForm:"delErr", learnForm:"lnErr"}[f];
+    const errId = {registerForm:"rErr", loginForm:"lErr", needForm:"needErr", catForm:"ctErr", subForm:"sbErr", orgForm:"oErr", contentForm:"cErr", pwForm:"pwErr", delForm:"delErr", learnForm:"lnErr"}[f];
     err.message = err.code === "validation" ? "Vérifiez les champs : certaines informations sont invalides ou trop courtes." : err.message;
     formError(errId, err);
   } finally { if (btn) btn.disabled = false; }
@@ -285,7 +340,7 @@ document.addEventListener("submit", async e => {
 window.addEventListener("popstate", () => render(currentPath()));
 
 (async function init() {
-  try { [cfg, categories, {user: me}] = await Promise.all([get("/api/config"), get("/api/categories"), get("/api/me")]); } catch {}
+  try { [cfg, {user: me}] = await Promise.all([get("/api/config"), get("/api/me")]); await loadCat(); syncHue(); } catch {}
   if (cfg.notice) { const b = q("pilotBanner"); b.textContent = cfg.notice; b.hidden = false; }
   topActions();
   await render();

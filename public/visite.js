@@ -51,7 +51,7 @@
 
       '<section class="vs" id="film"><div class="eyebrow">Étape 2 · Le film</div><h2>Du besoin à <em>l’orientation</em></h2><p class="vs-lead">Un film de 36 secondes. Touchez un numéro pour changer de scène.</p>' + film() + '</section>' +
 
-      '<section class="vs" id="categories"><div class="eyebrow">Étape 3 · Les catégories</div><h2>Huit portes <em>d’entrée</em></h2><p class="vs-lead">Chaque catégorie a sa page : ressources, opportunités et organisations vérifiées.</p><div class="cat-grid vs-cats">' + catCards + '</div></section>' +
+      '<section class="vs" id="categories"><div class="eyebrow">Étape 3 · Les catégories</div><h2>Trente catégories, <em>huit familles</em></h2><p class="vs-lead">Chaque catégorie a sa page : sous-thèmes, ressources, opportunités et organisations vérifiées. « Autres besoins » reste toujours ouverte.</p><div class="cat-grid vs-cats">' + catCards + '</div></section>' +
 
       '<section class="vs" id="essai"><div class="eyebrow">Étape 4 · Essayer</div><h2>Simulez <em>un besoin</em></h2><p class="vs-lead">Simulation : rien n’est envoyé ni enregistré. Elle montre ce qui se passerait avec un vrai compte.</p>' +
         '<form class="vs-sim" id="simForm"><label for="simCat">Votre besoin concerne…</label><select id="simCat">' + opts + '</select><button class="button" type="submit">Voir la suite ↗</button></form>' +

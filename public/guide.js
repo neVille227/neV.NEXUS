@@ -8,9 +8,9 @@
 
   var STEPS = [
     { t: 'Bienvenue sur neV.NEXUS', p: 'Ici, les personnes trouvent des ressources, des opportunités et des organisations vérifiées. Ce tour dure 30 secondes.', icon: 'N' },
-    { t: 'Explorer par catégorie', p: 'Huit catégories : orientation, formation, association, opportunité, accompagnement, services sociaux, entrepreneuriat, initiative communautaire. Chacune a sa page.', go: ['/explorer', 'Explorer les catégories'], hl: '/explorer' },
+    { t: 'Explorer par catégorie', p: 'Trente catégories en huit familles : vie quotidienne, santé, éducation et avenir, vie sociale, vie pratique, épanouissement, collectivité… Chacune a sa page.', go: ['/explorer', 'Explorer les catégories'], hl: '/explorer' },
     { t: 'Des fiches vérifiées', p: 'Une organisation n’apparaît qu’après vérification. Son statut est toujours visible : Vérifiée, À renouveler, Signalée… Une erreur ? Le bouton « Signaler » est sur chaque fiche.', go: ['/organisations', 'Voir les organisations'], hl: '/organisations' },
-    { t: 'Un besoin, en privé', p: 'Vous ne trouvez pas ? Décrivez votre besoin en quelques mots. Il reste privé : seules les personnes habilitées le lisent pour vous orienter. Un compte est nécessaire.', go: ['/besoin', 'Déposer un besoin'] },
+    { t: 'Un besoin, en privé', p: 'Vous ne trouvez pas ? Décrivez votre besoin avec vos mots : aucun besoin n’est trop petit. Il reste privé : seules les personnes habilitées le lisent pour vous orienter. Un compte est nécessaire.', go: ['/besoin', 'Déposer un besoin'] },
     { t: 'La visite guidée', p: 'Un film de 36 secondes et un simulateur pour comprendre, sans compte et sans rien enregistrer.', go: ['/visite', 'Lancer la visite'], hl: '/visite' },
     { t: 'Rejoindre le pilote', p: 'La phase pilote se fait sur code d’invitation. Une organisation peut aussi soumettre sa fiche, relue avant publication.', go: ['/inscription', 'Créer un compte'] },
     { t: 'Aide et mode allégé', p: 'Le bouton ⚡ coupe les animations si votre appareil ou votre connexion est lent. Le bouton « ? » rouvre ce guide à tout moment.' }

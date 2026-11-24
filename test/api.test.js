@@ -77,7 +77,7 @@ test("besoins : privés, propres à chaque utilisateur", async () => {
   const a = ctx.client(), b = ctx.client(), anon = ctx.client();
   await reg(a, "need-a@ex.com"); await reg(b, "need-b@ex.com");
   assert.equal((await anon.post("/api/needs", { summary: "Formation", description: "Je cherche une formation" })).status, 401);
-  const created = await a.post("/api/needs", { category: "Formation", summary: "Formation", description: "Je cherche une formation en informatique" });
+  const created = await a.post("/api/needs", { category: "Éducation et formation", summary: "Formation", description: "Je cherche une formation en informatique" });
   assert.equal(created.status, 201);
   assert.equal((await a.get("/api/me/needs")).json.length, 1);
   assert.equal((await b.get("/api/me/needs")).json.length, 0);
@@ -89,7 +89,7 @@ test("besoins : privés, propres à chaque utilisateur", async () => {
 test("cycle organisation : soumission, vérification, publication, modification, suspension", async () => {
   const member = ctx.client();
   await reg(member, "m1@ex.com");
-  const orgBody = { name: "Association Test", category: "Association", description: "Une association de démonstration.", services: "Orientation", interventionZone: "Abomey-Calavi", locality: "Abomey-Calavi" };
+  const orgBody = { name: "Association Test", category: "Relations humaines et solidarité", description: "Une association de démonstration.", services: "Orientation", interventionZone: "Abomey-Calavi", locality: "Abomey-Calavi" };
   assert.equal((await member.post("/api/organizations", orgBody)).status, 403);
 
   const owner = ctx.client();
@@ -103,7 +103,7 @@ test("cycle organisation : soumission, vérification, publication, modification,
   assert.equal((await anon.get("/api/organizations")).json.length, 0);
   assert.equal((await anon.get(`/api/organizations/${orgId}`)).status, 404);
 
-  const res1 = await owner.post(`/api/organizations/${orgId}/resources`, { title: "Point d'orientation", description: "Accueil et orientation des habitants.", category: "Orientation" });
+  const res1 = await owner.post(`/api/organizations/${orgId}/resources`, { title: "Point d'orientation", description: "Accueil et orientation des habitants.", category: "Développement personnel" });
   assert.equal(res1.status, 201);
   assert.equal(res1.json.status, "pending_review");
 
@@ -126,14 +126,14 @@ test("cycle organisation : soumission, vérification, publication, modification,
   const list = (await anon.get("/api/resources?q=orientation")).json;
   assert.equal(list.length, 1);
   assert.equal(list[0].organization, "Association Test");
-  assert.equal((await anon.get("/api/resources?category=Formation")).json.length, 0);
+  assert.equal((await anon.get("/api/resources?category=Éducation%20et%20formation")).json.length, 0);
 
   // les compteurs de catégories reflètent uniquement le contenu public
   const cats = (await anon.get("/api/categories")).json;
-  const orient = cats.find((c) => c.slug === "orientation"), assoc = cats.find((c) => c.slug === "association");
+  const orient = cats.find((c) => c.slug === "developpement-personnel"), assoc = cats.find((c) => c.slug === "relations-humaines-et-solidarite");
   assert.equal(orient.resources, 1);
   assert.equal(assoc.organizations, 1);
-  assert.equal(cats.find((c) => c.slug === "formation").resources, 0);
+  assert.equal(cats.find((c) => c.slug === "education-et-formation").resources, 0);
 
   // modifier une fiche vérifiée relance la vérification et la retire de l'affichage
   const upd = await owner.patch(`/api/organizations/${orgId}`, { ...orgBody, description: "Description modifiée de la fiche." });
@@ -256,4 +256,59 @@ test("entretien : expirations et renouvellement de vérification", async () => {
   await maintenance(ctx.pool);
   assert.equal((await ctx.pool.query("SELECT verification_status s FROM organizations WHERE id = $1", [o.id])).rows[0].s, "renewal_due");
   assert.equal((await ctx.pool.query("SELECT COUNT(*)::int n FROM needs WHERE summary = 'vieux'")).rows[0].n, 0);
+});
+
+test("catalogue central : 30 catégories, 8 familles, sous-catégories", async () => {
+  const anon = ctx.client();
+  const cat = (await anon.get("/api/catalogue")).json;
+  assert.equal(cat.categories.length, 30);
+  assert.equal(cat.families.length, 8);
+  assert.equal(cat.categories.every((c) => c.subcategories.length >= 5), true);
+  assert.equal(cat.categories.some((c) => c.slug === "autres-besoins"), true);
+  // chaque catégorie apparaît dans au moins une famille
+  const placed = new Set(cat.families.flatMap((f) => f.categories));
+  assert.equal(cat.categories.every((c) => placed.has(c.slug)), true);
+  const logement = cat.categories.find((c) => c.slug === "logement-et-habitat");
+  assert.equal(logement.subcategories.some((s) => s.name === "Recherche de logement"), true);
+});
+
+test("besoin détaillé : plusieurs catégories, confidentialité renforcée, « Autres besoins » par défaut", async () => {
+  const u = ctx.client(); await reg(u, "need-full@ex.com");
+  const full = await u.post("/api/needs", { category: "Logement et habitat", subcategory: "Recherche de logement", categories: ["Finances et ressources économiques", "Inexistante"],
+    summary: "Trouver un logement", description: "Je cherche un logement près de mon travail.", country: "Bénin", locality: "Abomey-Calavi",
+    nature: "materiel", frequency: "ponctuel", priority: "eleve", supportType: "orientation", confidentiality: "public" });
+  assert.equal(full.status, 201);
+  assert.deepEqual(full.json.categories, ["Logement et habitat", "Finances et ressources économiques"]);
+  assert.equal(full.json.confidentiality, "public");
+  // catégorie sensible : confidentialité forcée à « privée »
+  const sens = await u.post("/api/needs", { category: "Santé mentale et bien-être", summary: "Besoin d'écoute", description: "J'ai besoin de parler à quelqu'un.", confidentiality: "public" });
+  assert.equal(sens.json.confidentiality, "private");
+  assert.equal(sens.json.sensitive, true);
+  // sans catégorie : « Autres besoins »
+  const none = await u.post("/api/needs", { summary: "Autre chose", description: "Une demande qui ne rentre dans aucune case." });
+  assert.deepEqual(none.json.categories, ["Autres besoins"]);
+  const mine = (await u.get("/api/me/needs")).json;
+  const f = mine.find((n) => n.summary === "Trouver un logement");
+  assert.equal(f.priority, "eleve"); assert.equal(f.categories.length, 2); assert.equal(f.categories[0].subcategory, "Recherche de logement");
+  assert.equal((await u.post("/api/needs", { summary: "x", description: "description valide", priority: "critique" })).status, 400);
+});
+
+test("catalogue : administration réservée aux administrateurs, « Autres besoins » protégé", async () => {
+  const user = ctx.client(), admin = ctx.client();
+  await reg(user, "cat-user@ex.com"); await reg(admin, "cat-admin@ex.com");
+  await ctx.pool.query("UPDATE users SET role = 'administrator' WHERE email = 'cat-admin@ex.com'");
+  assert.equal((await user.post("/api/admin/categories", { name: "Nouvelle catégorie" })).status, 403);
+  const created = await admin.post("/api/admin/categories", { name: "Mobilité douce", families: ["vie-pratique"] });
+  assert.equal(created.status, 201);
+  assert.equal((await admin.post("/api/admin/categories", { name: "Mobilité douce" })).status, 409);
+  const sub = await admin.post(`/api/admin/categories/${created.json.id}/subcategories`, { name: "Vélo" });
+  assert.equal(sub.status, 201);
+  let pub = (await ctx.client().get("/api/catalogue")).json;
+  assert.equal(pub.categories.length, 31);
+  assert.equal(pub.families.find((f) => f.slug === "vie-pratique").categories.includes("mobilite-douce"), true);
+  assert.equal((await admin.patch(`/api/admin/categories/${created.json.id}`, { active: false })).status, 200);
+  pub = (await ctx.client().get("/api/catalogue")).json;
+  assert.equal(pub.categories.length, 30);
+  const other = pub.categories.find((c) => c.slug === "autres-besoins");
+  assert.equal((await admin.patch(`/api/admin/categories/${other.id}`, { active: false })).status, 400);
 });

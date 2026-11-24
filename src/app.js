@@ -36,10 +36,25 @@ const schemas = {
   deleteAccount: z.object({ password: z.string().min(1).max(128) }),
   need: z.object({
     category: z.string().trim().max(60).optional().nullable(),
+    subcategory: z.string().trim().max(80).optional().nullable(),
+    categories: z.array(z.string().trim().max(60)).max(5).optional(),
     summary: txt(3, 120),
     description: txt(8, 2000),
     locality: opt(80),
+    country: opt(60),
+    nature: z.enum(["materiel", "financier", "humain", "technique", "informationnel", "autre"]).optional().nullable(),
+    frequency: z.enum(["ponctuel", "occasionnel", "regulier", "permanent"]).optional().nullable(),
+    priority: z.enum(["faible", "normal", "eleve", "urgent"]).default("normal"),
+    supportType: z.enum(["aide_directe", "orientation", "mise_en_relation", "conseil", "formation"]).optional().nullable(),
+    confidentiality: z.enum(["public", "organizations", "private"]).default("private"),
   }),
+  catAdmin: z.object({
+    name: txt(2, 60), description: txt(0, 300).default(""), sensitive: z.boolean().default(false),
+    families: z.array(z.string().trim().max(60)).max(8).default([]),
+  }),
+  catPatch: z.object({ name: txt(2, 60).optional(), active: z.boolean().optional(), sensitive: z.boolean().optional(), position: z.number().int().min(0).max(1000).optional() }),
+  subAdmin: z.object({ name: txt(2, 80) }),
+  subPatch: z.object({ name: txt(2, 80).optional(), active: z.boolean().optional() }),
   org: z.object({
     name: txt(2, 120),
     category: z.string().trim().max(60).optional().nullable(),
@@ -164,7 +179,7 @@ export function createApp({ pool, env = process.env } = {}) {
 
   const categoryId = async (name) => {
     if (!name) return null;
-    const { rows } = await pool.query("SELECT id FROM categories WHERE name = $1", [name]);
+    const { rows } = await pool.query("SELECT id FROM categories WHERE name = $1 AND active", [name]);
     return rows[0]?.id ?? null;
   };
   const idParam = (req) => {
@@ -179,19 +194,29 @@ export function createApp({ pool, env = process.env } = {}) {
     pilotMode: true,
     notice: "Version pilote : service en test supervisé, ne saisissez aucune information sensible.",
   }));
-  app.get("/api/categories", wrap(async (req, res) => {
-    // Compteurs : uniquement les contenus publiés d'organisations vérifiées (ce que le public peut voir).
-    res.json((await pool.query(`
-      SELECT c.name, c.slug,
-        (SELECT COUNT(*)::int FROM resources r JOIN organizations o ON o.id = r.organization_id
+  const CAT_SQL = `(SELECT COUNT(*)::int FROM resources r JOIN organizations o ON o.id = r.organization_id
           WHERE r.category_id = c.id AND r.status = 'published' AND o.verification_status IN ('verified','renewal_due')) AS resources,
         (SELECT COUNT(*)::int FROM opportunities p JOIN organizations o ON o.id = p.organization_id
           WHERE p.category_id = c.id AND p.status = 'published' AND o.verification_status IN ('verified','renewal_due')
             AND (p.deadline IS NULL OR p.deadline > NOW())) AS opportunities,
         (SELECT COUNT(*)::int FROM organizations o
-          WHERE o.category_id = c.id AND o.verification_status IN ('verified','renewal_due')) AS organizations
-      FROM categories c ORDER BY c.name`)).rows);
-  }));
+          WHERE o.category_id = c.id AND o.verification_status IN ('verified','renewal_due')) AS organizations`;
+  const slugify = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const loadCatalogue = async (all) => {
+    const cats = (await pool.query(`SELECT c.id, c.name, c.slug, c.position, c.active, c.sensitive,
+        ${CAT_SQL},
+        COALESCE((SELECT json_agg(f.slug ORDER BY cf.position) FROM category_families cf JOIN families f ON f.id = cf.family_id WHERE cf.category_id = c.id), '[]') AS families,
+        COALESCE((SELECT json_agg(json_build_object('id', s.id, 'name', s.name, 'slug', s.slug, 'active', s.active) ORDER BY s.position, s.name)
+                  FROM subcategories s WHERE s.category_id = c.id ${all ? "" : "AND s.active"}), '[]') AS subcategories
+      FROM categories c ${all ? "" : "WHERE c.active"} ORDER BY c.position, c.name`)).rows;
+    const families = (await pool.query(`SELECT f.slug, f.name, f.description,
+        COALESCE((SELECT json_agg(c.slug ORDER BY cf.position) FROM category_families cf JOIN categories c ON c.id = cf.category_id WHERE cf.family_id = f.id ${all ? "" : "AND c.active"}), '[]') AS categories
+      FROM families f ORDER BY f.position`)).rows;
+    return { families, categories: cats };
+  };
+  app.get("/api/categories", wrap(async (req, res) => { res.json((await loadCatalogue(false)).categories); }));
+  app.get("/api/catalogue", wrap(async (req, res) => { res.json(await loadCatalogue(false)); }));
+
 
   const searchClause = (q, cols, params) => {
     if (!q) return "";
@@ -326,12 +351,32 @@ export function createApp({ pool, env = process.env } = {}) {
   // ---------- besoins (HELP) : privés ----------
   app.post("/api/needs", requireAuth, writeLimiter, wrap(async (req, res) => {
     const d = parse(schemas.need, req.body);
-    const { rows } = await pool.query("INSERT INTO needs(user_id, category_id, summary, description, locality) VALUES ($1,$2,$3,$4,$5) RETURNING id, status, created_at",
-      [req.user.id, await categoryId(d.category), d.summary, d.description, d.locality]);
-    res.status(201).json(rows[0]);
+    // une ou plusieurs catégories ; sans choix, « Autres besoins » (toujours disponible)
+    const wanted = [...new Set([d.category, ...(d.categories || [])].filter(Boolean))];
+    let cats = wanted.length ? (await pool.query("SELECT id, name, sensitive FROM categories WHERE name = ANY($1) AND active", [wanted])).rows : [];
+    cats.sort((x, y) => wanted.indexOf(x.name) - wanted.indexOf(y.name));
+    if (!cats.length) cats = (await pool.query("SELECT id, name, sensitive FROM categories WHERE slug = 'autres-besoins'")).rows;
+    const sensitive = cats.some((c) => c.sensitive);
+    const confidentiality = sensitive ? "private" : d.confidentiality;   // demandes sensibles : confidentialité renforcée
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const { rows } = await client.query(`INSERT INTO needs(user_id, category_id, summary, description, locality, country, nature, frequency, priority, support_type, confidentiality)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id, status, created_at`,
+        [req.user.id, cats[0]?.id ?? null, d.summary, d.description, d.locality, d.country, d.nature ?? null, d.frequency ?? null, d.priority, d.supportType ?? null, confidentiality]);
+      for (const [i, c] of cats.entries()) {
+        let sub = null;
+        if (i === 0 && d.subcategory) sub = (await client.query("SELECT id FROM subcategories WHERE category_id = $1 AND name = $2 AND active", [c.id, d.subcategory])).rows[0]?.id ?? null;
+        await client.query("INSERT INTO need_categories(need_id, category_id, subcategory_id) VALUES ($1,$2,$3)", [rows[0].id, c.id, sub]);
+      }
+      await client.query("COMMIT");
+      res.status(201).json({ ...rows[0], confidentiality, sensitive, categories: cats.map((c) => c.name) });
+    } catch (e) { await client.query("ROLLBACK"); throw e; } finally { client.release(); }
   }));
+
   app.get("/api/me/needs", requireAuth, wrap(async (req, res) => {
-    res.json((await pool.query(`SELECT n.id, n.summary, n.description, n.locality, n.status, n.created_at, c.name AS category
+    res.json((await pool.query(`SELECT n.id, n.summary, n.description, n.locality, n.country, n.nature, n.frequency, n.priority, n.support_type, n.confidentiality, n.status, n.created_at, c.name AS category,
+      COALESCE((SELECT json_agg(json_build_object('category', k.name, 'subcategory', s.name) ORDER BY k.position) FROM need_categories nc JOIN categories k ON k.id = nc.category_id LEFT JOIN subcategories s ON s.id = nc.subcategory_id WHERE nc.need_id = n.id), '[]') AS categories
       FROM needs n LEFT JOIN categories c ON c.id = n.category_id WHERE n.user_id = $1 ORDER BY n.created_at DESC`, [req.user.id])).rows);
   }));
   app.delete("/api/me/needs/:id", requireAuth, wrap(async (req, res) => {
@@ -404,11 +449,12 @@ export function createApp({ pool, env = process.env } = {}) {
       resources: await one(`SELECT r.id, r.title, r.description, o.name AS organization, o.verification_status FROM resources r JOIN organizations o ON o.id = r.organization_id WHERE r.status = 'pending_review' ORDER BY r.created_at LIMIT 100`),
       opportunities: await one(`SELECT p.id, p.title, p.description, o.name AS organization, o.verification_status FROM opportunities p JOIN organizations o ON o.id = p.organization_id WHERE p.status = 'pending_review' ORDER BY p.created_at LIMIT 100`),
       reports: await one(`SELECT id, target_type, target_id, reason, status, created_at FROM reports WHERE status IN ('open','under_review') ORDER BY created_at LIMIT 100`),
-      needs: await one(`SELECT n.id, n.summary, n.status, n.created_at, c.name AS category FROM needs n LEFT JOIN categories c ON c.id = n.category_id WHERE n.status IN ('received','reviewing') ORDER BY n.created_at LIMIT 100`),
+      needs: await one(`SELECT n.id, n.summary, n.status, n.priority, n.created_at, c.name AS category FROM needs n LEFT JOIN categories c ON c.id = n.category_id WHERE n.status IN ('received','reviewing') ORDER BY CASE n.priority WHEN 'urgent' THEN 0 WHEN 'eleve' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END, n.created_at LIMIT 100`),
     });
   }));
   app.get("/api/admin/needs/:id", mod, wrap(async (req, res) => {
-    const { rows } = await pool.query(`SELECT n.id, n.summary, n.description, n.locality, n.status, n.created_at, c.name AS category FROM needs n LEFT JOIN categories c ON c.id = n.category_id WHERE n.id = $1`, [idParam(req)]);
+    const { rows } = await pool.query(`SELECT n.id, n.summary, n.description, n.locality, n.country, n.nature, n.frequency, n.priority, n.support_type, n.confidentiality, n.status, n.created_at, c.name AS category,
+      COALESCE((SELECT json_agg(json_build_object('category', k.name, 'subcategory', s.name) ORDER BY k.position) FROM need_categories nc JOIN categories k ON k.id = nc.category_id LEFT JOIN subcategories s ON s.id = nc.subcategory_id WHERE nc.need_id = n.id), '[]') AS categories FROM needs n LEFT JOIN categories c ON c.id = n.category_id WHERE n.id = $1`, [idParam(req)]);
     if (!rows[0]) throw new HttpError(404, "Introuvable.", "not_found");
     await audit(req.user.id, "need.view", "need", rows[0].id);
     res.json(rows[0]);
@@ -466,6 +512,50 @@ export function createApp({ pool, env = process.env } = {}) {
     if (!r.rowCount) throw new HttpError(404, "Introuvable.", "not_found");
     if (d.isActive === false) await pool.query("DELETE FROM sessions WHERE user_id = $1", [id]);
     await audit(req.user.id, "user.admin_update", "user", id, d);
+    res.json({ ok: true });
+  }));
+  // catalogue : ajout, modification, désactivation (administrateurs)
+  app.get("/api/admin/catalogue", adm, wrap(async (req, res) => { res.json(await loadCatalogue(true)); }));
+  app.post("/api/admin/categories", adm, wrap(async (req, res) => {
+    const d = parse(schemas.catAdmin, req.body), slug = slugify(d.name);
+    if (!slug) throw new HttpError(400, "Nom invalide.", "validation");
+    const pos = (await pool.query("SELECT COALESCE(MAX(position),0)+1 AS p FROM categories WHERE slug <> 'autres-besoins'")).rows[0].p;
+    try {
+      const { rows } = await pool.query("INSERT INTO categories(name, slug, position, sensitive) VALUES ($1,$2,$3,$4) RETURNING id, name, slug", [d.name, slug, pos, d.sensitive]);
+      for (const f of d.families) await pool.query("INSERT INTO category_families(category_id, family_id, position) SELECT $1, id, 99 FROM families WHERE slug = $2", [rows[0].id, f]);
+      await audit(req.user.id, "category.create", "category", rows[0].id, { name: d.name });
+      res.status(201).json(rows[0]);
+    } catch (e) { if (e.code === "23505") throw new HttpError(409, "Cette catégorie existe déjà.", "conflict"); throw e; }
+  }));
+  app.patch("/api/admin/categories/:id", adm, wrap(async (req, res) => {
+    const d = parse(schemas.catPatch, req.body), id = idParam(req);
+    const cur = (await pool.query("SELECT slug FROM categories WHERE id = $1", [id])).rows[0];
+    if (!cur) throw new HttpError(404, "Introuvable.", "not_found");
+    if (cur.slug === "autres-besoins" && (d.active === false || d.name)) throw new HttpError(400, "« Autres besoins » doit toujours rester accessible.", "validation");
+    try {
+      await pool.query("UPDATE categories SET name = COALESCE($1,name), slug = COALESCE($2,slug), active = COALESCE($3,active), sensitive = COALESCE($4,sensitive), position = COALESCE($5,position) WHERE id = $6",
+        [d.name ?? null, d.name ? slugify(d.name) : null, d.active ?? null, d.sensitive ?? null, d.position ?? null, id]);
+    } catch (e) { if (e.code === "23505") throw new HttpError(409, "Ce nom est déjà utilisé.", "conflict"); throw e; }
+    await audit(req.user.id, "category.update", "category", id, d);
+    res.json({ ok: true });
+  }));
+  app.post("/api/admin/categories/:id/subcategories", adm, wrap(async (req, res) => {
+    const d = parse(schemas.subAdmin, req.body), id = idParam(req), slug = slugify(d.name);
+    if (!slug) throw new HttpError(400, "Nom invalide.", "validation");
+    if (!(await pool.query("SELECT 1 FROM categories WHERE id = $1", [id])).rowCount) throw new HttpError(404, "Introuvable.", "not_found");
+    try {
+      const { rows } = await pool.query("INSERT INTO subcategories(category_id, name, slug, position) SELECT $1, $2, $3, COALESCE(MAX(position),0)+1 FROM subcategories WHERE category_id = $1 RETURNING id, name, slug", [id, d.name, slug]);
+      await audit(req.user.id, "subcategory.create", "category", id, { name: d.name });
+      res.status(201).json(rows[0]);
+    } catch (e) { if (e.code === "23505") throw new HttpError(409, "Cette sous-catégorie existe déjà.", "conflict"); throw e; }
+  }));
+  app.patch("/api/admin/subcategories/:id", adm, wrap(async (req, res) => {
+    const d = parse(schemas.subPatch, req.body), id = idParam(req);
+    try {
+      const r = await pool.query("UPDATE subcategories SET name = COALESCE($1,name), slug = COALESCE($2,slug), active = COALESCE($3,active) WHERE id = $4", [d.name ?? null, d.name ? slugify(d.name) : null, d.active ?? null, id]);
+      if (!r.rowCount) throw new HttpError(404, "Introuvable.", "not_found");
+    } catch (e) { if (e.code === "23505") throw new HttpError(409, "Ce nom est déjà utilisé.", "conflict"); throw e; }
+    await audit(req.user.id, "subcategory.update", "subcategory", id, d);
     res.json({ ok: true });
   }));
   app.get("/api/admin/audit", adm, wrap(async (req, res) => {
